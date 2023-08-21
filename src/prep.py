@@ -808,11 +808,11 @@ if __name__ == '__main__':
         print(
             "Error! If you want to preprocess system supported datasets (Data_six and SARD), please do this:"
         )
-        print("\tpython prep.py --dataset Data_six")
+        print("\tpython prep.py --Dataset Data_six")
         print("\tor")
-        print("\tpython prep.py --dataset SARD")
+        print("\tpython prep.py --Dataset SARD")
         print("\tor")
-        print("\tpython prep.py --dataset SARD_4")
+        print("\tpython prep.py --Dataset SARD_4")
         print()
 
         print(

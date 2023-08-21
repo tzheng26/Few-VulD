@@ -12,7 +12,7 @@ from tensorflow.compat.v1.keras import losses
 from tensorflow.compat.v1.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.compat.v1.keras.callbacks import TensorBoard, CSVLogger
 from sklearn.utils import class_weight
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
 from tensorflow.compat.v1.keras.models import load_model
 from sklearn.model_selection import train_test_split
 from src.DataLoader import (
@@ -39,29 +39,32 @@ class Helper:
         self.paras = paras
 
         now = datetime.datetime.now()
-        # self.verbose("-------------------------------------------------------")
-        # self.verbose("Experiment Date: " + now.strftime("%m/%d/%Y %H:%M:%S"))
 
         """config 定义的参数"""
-        # TODO 记得根据数据集的实际情况修改
         # path of the pre-trained tokenizer and w2v model
         self.tokenizer_path = self.config['training_settings']['tokenizer_path']
         self.embed_path = self.config['training_settings']['embedding_model_path']
         self.verbose("-------------------------------------------------------")
+        self.verbose("Word2vec Info:")
         self.verbose("Path to the tokenizer: " + self.tokenizer_path)
         self.verbose("Path to the embeding model: " + self.embed_path)
 
         # By default, transfer tokens to 100-d vectors
         self.embed_dim = self.config['model_settings']['model_para']['embedding_dim']
 
-        # 模型保存路径
-        # TODO: 没用上，看和下面的怎么合并
-        if not os.path.exists(self.config['training_settings']['model_save_path']):
-            os.makedirs(self.config['training_settings']['model_save_path'])
+        # # 模型保存路径
+        # # TODO: 没用上，看和下面的怎么合并
+        # if not os.path.exists(self.config['training_settings']['model_save_path']):
+        #     os.makedirs(self.config['training_settings']['model_save_path'])
 
         # 保存训练模型的路径和名称
-        # TODO: 看和上面的怎么合并
-        self.model_name = "Models/" + self.config['model_settings']['model']
+        if not os.path.exists(self.config['training_settings']['model_save_path']):
+            os.makedirs(self.config['training_settings']['model_save_path'])
+        self.model_name = (
+            self.config['training_settings']['model_save_path']
+            + os.sep
+            + self.config['model_settings']['model']
+        )
 
         # date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
         # self.model_name = (
@@ -86,18 +89,17 @@ class Helper:
         #     + date
         # )
 
-        # 一个batch几个任务
-        # TODO: batch size 大小默认值的设定后面再改，当前先写死成 4
+        # 一个batch几个任务 (即，元学习中使用的CWE类型数量)
         self.batch_s = self.config['training_settings']['network_config']['batch_size']
-        self.batch_s = 4
         self.verbose("-------------------------------------------------------")
-        self.verbose("Batch size is set: " + str(self.batch_s))
+        self.verbose("Batch size: " + str(self.batch_s))
 
         """para 定义的参数"""
         # The output path of the trained network model. 输出到 result/里
         # TODO: 没用上,后续可以改成和上面设置的模型保存路径一致
-        if not os.path.exists(self.paras.output_dir):
-            os.makedirs(self.paras.output_dir)
+        # if not os.path.exists(self.paras.output_dir):
+        #     os.makedirs(self.paras.output_dir)
+
         # 日志
         if not os.path.exists(self.paras.logdir):
             os.makedirs(self.paras.logdir)
@@ -1482,7 +1484,7 @@ class Trainer(Helper):
             ax.legend(loc="best")
         plt.subplots_adjust(wspace=0.3, hspace=0.3)
         graph_save_path = (
-            "result_analysis/Graphs"
+            "result_analysis"
             + os.sep
             + self.config['model_settings']['model']
             + os.sep
@@ -1762,16 +1764,33 @@ class Tester(Helper):
 
         # 实验结果保存路径（保存训练、测试漏洞类型，k值，各漏洞类型的实验结果，使用的哪一个模型等）
         date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-        experiment_result_path = "experiment_result"
+
+        # experiment_result_path = "experiment_result"
+        # if not os.path.isdir(experiment_result_path):
+        #     os.makedirs(experiment_result_path)
+        # experiment_result_filename = date + '.json'
+        # if os.path.isfile(experiment_result_path + os.sep + experiment_result_filename):
+        #     experiment_result_filename = (
+        #         os.path.splitext(experiment_result_filename)[0]
+        #         + "_new"
+        #         + os.path.splitext(experiment_result_filename)[1]
+        #     )
+        # experiment_result_path = (
+        #     experiment_result_path + os.sep + experiment_result_filename
+        # )
+
+        experiment_result_path = (
+            "result_analysis"
+            + os.sep
+            + self.config['model_settings']['model']
+            + os.sep
+            + "Meta-test"
+            + os.sep
+            + date
+        )
         if not os.path.isdir(experiment_result_path):
             os.makedirs(experiment_result_path)
-        experiment_result_filename = date + '.json'
-        if os.path.isfile(experiment_result_path + os.sep + experiment_result_filename):
-            experiment_result_filename = (
-                os.path.splitext(experiment_result_filename)[0]
-                + "_new"
-                + os.path.splitext(experiment_result_filename)[1]
-            )
+        experiment_result_filename = "test_info" + '.json'
         experiment_result_path = (
             experiment_result_path + os.sep + experiment_result_filename
         )
@@ -1881,6 +1900,9 @@ class Tester(Helper):
                 exit(5)
 
             # 统计多次实验的结果
+            list_all_labels = []
+            list_all_probs = []
+            list_all_ppred = []
             list_all_loss = []
             list_all_acc = []
             list_all_recall = []
@@ -1978,6 +2000,9 @@ class Tester(Helper):
 
                 # 计算模型对于 CWE-k 的测试集的损失、准确率、召回率、精度等。
                 (
+                    query_label,
+                    prb_pred,  # 概率, 用于计算AUC
+                    ppred,
                     type_loss,
                     type_acc,
                     rec,
@@ -2000,6 +2025,12 @@ class Tester(Helper):
                 )
 
                 print(
+                    "query_label: ",
+                    query_label,
+                    "prb_pred: ",
+                    prb_pred,
+                    "ppred: ",
+                    ppred,
                     "Loss: ",
                     type_loss,
                     "Accuracy: ",
@@ -2025,6 +2056,9 @@ class Tester(Helper):
                 )
                 print("Average time for testing each test data: ", mean_test_query)
 
+                list_all_labels = list_all_labels + list(query_label)
+                list_all_probs = list_all_probs + list(prb_pred)
+                list_all_ppred = list_all_ppred + list(ppred)
                 list_all_loss.append(type_loss)
                 list_all_acc.append(type_acc)
                 list_all_recall.append(rec)
@@ -2037,6 +2071,7 @@ class Tester(Helper):
                 list_all_test_support_interval.append(test_support_interval)
                 list_all_mean_test_query.append(mean_test_query)
 
+            # 计算10次实验的平均值
             average_loss = np.mean(list_all_loss)
             average_acc = np.mean(list_all_acc)
             average_recall = np.mean(list_all_recall)
@@ -2047,7 +2082,6 @@ class Tester(Helper):
             average_f1 = np.mean(list_all_f1)
             average_test_support_interval = np.mean(list_all_test_support_interval)
             average_mean_test_query = np.mean(list_all_mean_test_query)
-
             self.verbose("-------------------------------------------------------")
             self.verbose("Conclusion -- The test result after 10 rounds:")
             print("Average loss: ", average_loss)
@@ -2068,6 +2102,16 @@ class Tester(Helper):
             print()
             print()
 
+            # 把实验结果写入json文件
+            js_exp_result["Experiment Results"][CWE]["Query labels"] = list(
+                map(float, list_all_labels)
+            )
+            js_exp_result["Experiment Results"][CWE][
+                "Probs. of being vulnerable"
+            ] = list(map(float, list_all_probs))
+            js_exp_result["Experiment Results"][CWE]["Predicted labels"] = list(
+                map(float, list_all_ppred)
+            )
             js_exp_result["Experiment Results"][CWE]["Average loss"] = float(
                 average_loss
             )
@@ -2099,6 +2143,9 @@ class Tester(Helper):
 
         # 画图：各测试CWE类型的各项评估结果。图1: 一次性展示所有CWE的所有评估结果；图2: 分别表示所有CWE的各项评估结果
         test_CWE_types = js_exp_result["Experiment Settings"]["Meta-testing CWE types"]
+        list_query_labels = []
+        list_predict_probs = []
+        list_predicted_labels = []
         list_loss = []
         list_acc = []
         list_recall = []
@@ -2108,6 +2155,15 @@ class Tester(Helper):
         list_FNR = []
         list_F1 = []
         for CWE in test_CWE_types:
+            list_query_labels.append(
+                js_exp_result["Experiment Results"][CWE]["Query labels"]
+            )
+            list_predict_probs.append(
+                js_exp_result["Experiment Results"][CWE]["Probs. of being vulnerable"]
+            )
+            list_predicted_labels.append(
+                js_exp_result["Experiment Results"][CWE]["Predicted labels"]
+            )
             list_loss.append(js_exp_result["Experiment Results"][CWE]["Average loss"])
             list_acc.append(
                 js_exp_result["Experiment Results"][CWE]["Average accuracy"]
@@ -2179,7 +2235,7 @@ class Tester(Helper):
             model_file = os.path.split(load_name)[-1]
             modelname = model_file.split('.')[0]
             graph_save_path = (
-                "result_analysis/Graphs"
+                "result_analysis"
                 + os.sep
                 + self.config['model_settings']['model']
                 + os.sep
@@ -2221,7 +2277,7 @@ class Tester(Helper):
             model_file = os.path.split(load_name)[-1]
             modelname = model_file.split('.')[0]
             graph_save_path = (
-                "result_analysis/Graphs"
+                "result_analysis"
                 + os.sep
                 + self.config['model_settings']['model']
                 + os.sep
@@ -2244,4 +2300,58 @@ class Tester(Helper):
         create_multi_bars(test_CWE_types, data, tick_step=10, group_gap=1.5, bar_gap=0)
         create_distinct_bars(test_CWE_types, data)
 
+        # 多子图画出所有测试CWE类型的ROC、AUC曲线
+        def create_multi_roc_curve(
+            test_CWE_types, list_query_labels, list_predict_probs
+        ):
+            # 画图
+            plt.figure(figsize=(10, 10), dpi=100)
+            for i in range(len(test_CWE_types)):
+                # print("List of query labels for " + test_CWE_types[i] + ":")
+                # print(list_query_labels[i])
+                # print("List of prediction probabilities for " + test_CWE_types[i] + ":")
+                # print(list_predict_probs[i])
+
+                fpr, tpr, thresholds = roc_curve(
+                    list_query_labels[i], list_predict_probs[i]
+                )
+                roc_auc = auc(fpr, tpr)
+                plt.plot(
+                    fpr,
+                    tpr,
+                    lw=1,
+                    label=test_CWE_types[i] + " (area = %0.2f)" % roc_auc,
+                )
+            plt.plot([0, 1], [0, 1], linestyle="--", lw=2, color="r")
+            plt.xlim([-0.05, 1.05])
+            plt.ylim([-0.05, 1.05])
+            plt.xlabel("False Positive Rate")
+            plt.ylabel("True Positive Rate")
+            plt.title("ROC Curve")
+            plt.legend(loc="lower right")
+
+            model_file = os.path.split(load_name)[-1]
+            modelname = model_file.split('.')[0]
+            graph_save_path = (
+                "result_analysis"
+                + os.sep
+                + self.config['model_settings']['model']
+                + os.sep
+                + "Meta-test"
+                + os.sep
+                + date
+            )
+            if not os.path.exists(graph_save_path):
+                os.makedirs(graph_save_path)
+            plt.savefig(graph_save_path + os.sep + modelname + "_ROC_curve.png")
+            print(
+                "ROC curve graph saved in: "
+                + graph_save_path
+                + os.sep
+                + modelname
+                + "_ROC_curve.png"
+            )
+            plt.close()
+
+        create_multi_roc_curve(test_CWE_types, list_query_labels, list_predict_probs)
         return

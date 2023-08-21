@@ -793,9 +793,13 @@ class Deep_model(object):
         loss = loss.numpy()
 
         ppred = []
+        # 预测的概率, 用于计算AUC
+        prb_pred = []
         # recall = []
         # precision = []
+
         for i in range(logits.shape[0]):
+            prb_pred.append(logits[i][0])  # 用于计算AUC
             num = 0
             # print(logits[i][0])
             if logits[i][0] > 0.5:
@@ -899,6 +903,9 @@ class Deep_model(object):
         mean_test_query_time = test_query_time / logits.shape[0]
 
         return (
+            query_label,
+            prb_pred,
+            ppred,
             loss,
             acc,
             recall,

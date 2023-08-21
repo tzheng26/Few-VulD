@@ -25,7 +25,7 @@ if __name__ == '__main__':
     log_filename = log_file_name()
     log_path = "../../w2v/logs"
     if not os.path.isdir(log_path):
-        os.mkdir(log_path)
+        os.makedirs(log_path)
     if os.path.isfile(log_path + os.sep + log_filename):
         log_filename = (
             os.path.splitext(log_filename)[0]
@@ -156,7 +156,7 @@ if __name__ == '__main__':
     w2vModel = Word2Vec(
         total_list,
         workers=paras.n_workers,
-        size=paras.size,
+        vector_size=paras.size,  # 之前是size，后版本更新改为veector_size
         window=paras.window,
         min_count=paras.min_count,
         sg=paras.algorithm,

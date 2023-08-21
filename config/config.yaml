@@ -20,7 +20,7 @@ training_settings:
     Test_set_ratio: 0.2 # If not using a separate test set, set the test set ratio.
     Validation_set_ratio: 0.2 # Use part of the training set as the validation set.
   network_config:
-    batch_size: 16
+    batch_size: 4
     epochs: 150
     patcience: 35
     save_training_history: True
@@ -33,5 +33,5 @@ training_settings:
   test_set_path: "test/"
   period_of_saving: 1
   log_path: "logs/"
-  model_save_path: "result/models/" #没用上。当前训练好的模型被保存在 Models/ 文件夹下
+  model_save_path: "Models" #没用上。当前训练好的模型被保存在 Models/ 文件夹下
   model_saved_name: "test_model_LSTM"

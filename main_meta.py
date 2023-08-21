@@ -20,25 +20,9 @@ from tensorflow.compat.v1.keras import backend as K
 from src.helper_for_metaL import Helper, Trainer, Tester
 import time
 import pickle
-
 import faulthandler
 
 faulthandler.enable()
-
-
-# 将程序运行命令行返回结果保存到日志文件夹中，以日期为文件名
-log_path = "logs/main_meta"
-if not os.path.isdir(log_path):
-    os.makedirs(log_path)
-log_filename = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()) + '.txt'
-if os.path.isfile(log_path + os.sep + log_filename):
-    log_filename = (
-        os.path.splitext(log_filename)[0] + "_new" + os.path.splitext(log_filename)[1]
-    )
-log_path = log_path + os.sep + log_filename
-LogOutputFile = open(log_path, 'w')
-sys.stdout = LogOutputFile
-sys.stderr = LogOutputFile
 
 
 def verbose(msg):
@@ -47,7 +31,7 @@ def verbose(msg):
 
 
 # GPU support is recommended.
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 # Arguments
 parser = argparse.ArgumentParser(
@@ -110,18 +94,28 @@ parser.add_argument('--model_num', default=None, help='num of loaded model')
 paras = parser.parse_args()
 config = yaml.safe_load(open(paras.config, 'r'))
 
-# ---------------------------------------------------------------------------------------------------------- #
+
+# ======================================================================================
+time_main = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+
+# 将输出重定向到日志文件
+log_path = "logs/main_meta"
+if not os.path.isdir(log_path):
+    os.makedirs(log_path)
+log_filename = time_main + '.txt'
+if os.path.isfile(log_path + os.sep + log_filename):
+    log_filename = (
+        os.path.splitext(log_filename)[0] + "_new" + os.path.splitext(log_filename)[1]
+    )
+log_path = log_path + os.sep + log_filename
+LogOutputFile = open(log_path, 'w')
+sys.stdout = LogOutputFile
+sys.stderr = LogOutputFile
+
+
 # 显示当前时间
 verbose("================================================")
-verbose(
-    "Experiment time: {}".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-)
-
-# 输出用户当前运行该python脚本的命令行参数
-verbose("================================================")
-verbose("Now, the user is running the python script named: main_meta.py")
-verbose("The command line parameters of the current python script are as follows:")
-verbose(paras)
+verbose("Experiment time: {}".format(time_main))
 
 
 # Step 1: Split training, validation, and test data
@@ -129,6 +123,15 @@ verbose(paras)
 if paras.sep_train_vali_test == True:
     verbose("================================================")
     verbose("Operation: Split training, validation, and test data")
+    verbose("================================================")
+    verbose("Running script 'main_meta.py' with parameters:")
+    verbose("python main_meta.py" + "\t" + "--config " + paras.config + " \\")
+    verbose("\t\t\t\t\t\t" + "--dataset " + paras.dataset + " \\")
+    verbose("\t\t\t\t\t\t" + "--experiment_scheme " + paras.experiment_scheme + " \\")
+    verbose("\t\t\t\t\t\t" + "--seed " + str(paras.seed) + " \\")
+    verbose("\t\t\t\t\t\t" + "--sep_train_vali_test " + " \\")
+    verbose("\t\t\t\t\t\t" + "--train_vali_test_dump " + paras.train_vali_test_dump)
+
     helper = Helper(config, paras)
     (
         train_x,
@@ -155,20 +158,26 @@ if paras.sep_train_vali_test == True:
 
     path = paras.train_vali_test_dump
     if not os.path.exists(path):
-        print("The path to dump processed train, vali, and test data does not exit.")
+        verbose("The path to dump processed train, vali, and test data does not exit.")
         os.makedirs(path)
 
-    for i in range(1000):
-        filename = "train_vali_test" + str(i)
-        if filename in os.listdir(path):
-            i = i + 1
-        else:
-            break
-
+    i = 0
+    filename = "train_vali_test" + str(i)
     save_path = os.path.join(path, filename)
+    while os.path.isfile(save_path):
+        i = i + 1
+        filename = "train_vali_test" + str(i)
+        save_path = os.path.join(path, filename)
+    # for i in range(1000):
+    #     filename = "train_vali_test" + str(i)
+    #     if filename in os.listdir(path):
+    #         i = i + 1
+    #     else:
+    #         break
+    # save_path = os.path.join(path, filename)
     with open(save_path, 'wb') as f:
         pickle.dump(Dict_tra_val_test, f)
-    print("The processed train, vali, test data has been dumped into: " + save_path)
+    verbose("The processed train, vali, test data has been dumped into: " + save_path)
 
 # Step 2 & 3: Meta-Training or Meta-Testing
 if paras.train_or_test != None:
@@ -176,10 +185,23 @@ if paras.train_or_test != None:
     file = paras.train_vali_test_load
     with open(file, 'rb') as f:
         loaded_data = pickle.load(f)
-    # train
+
+    # Meta-training
     if paras.train_or_test == 0:
         verbose("================================================")
         verbose("Operation: Meta-training")
+        verbose("================================================")
+        verbose("Running script 'main_meta.py' with parameters:")
+        verbose("python main_meta.py" + "\t" + "--config " + paras.config + " \\")
+        verbose("\t\t\t\t\t\t" + "--train_or_test " + str(paras.train_or_test) + " \\")
+        verbose(
+            "\t\t\t\t\t\t"
+            + "--train_vali_test_load "
+            + paras.train_vali_test_load
+            + " \\"
+        )
+        verbose("\t\t\t\t\t\t" + "--seed " + str(paras.seed))
+
         train_x = loaded_data["train_x"]
         train_y = loaded_data["train_y"]
         vali_x = loaded_data["vali_x"]
@@ -190,10 +212,24 @@ if paras.train_or_test != None:
             config, paras, train_x, train_y, vali_x, vali_y, Mtrain_CWE_types
         )
         trainer.exec()
-    # test
+
+    # Meta-testing
     elif paras.train_or_test == 1:
         verbose("================================================")
         verbose("Operation: Meta-testing")
+        verbose("================================================")
+        verbose("Running script 'main_meta.py' with parameters:")
+        verbose("python main_meta.py" + "\t" + "--config " + paras.config + " \\")
+        verbose("\t\t\t\t\t\t" + "--train_or_test " + str(paras.train_or_test) + " \\")
+        verbose(
+            "\t\t\t\t\t\t"
+            + "--train_vali_test_load "
+            + paras.train_vali_test_load
+            + " \\"
+        )
+        verbose("\t\t\t\t\t\t" + "trained_model " + paras.trained_model + " \\")
+        verbose("\t\t\t\t\t\t" + "--seed " + str(paras.seed))
+
         test_x = loaded_data["test_x"]
         test_y = loaded_data["test_y"]
         Mtrain_CWE_types = loaded_data["Meta_train_CWE_types"]
@@ -204,17 +240,6 @@ if paras.train_or_test != None:
         )
         tester.exec()
 
-
-# # 根据脚本是否指定 --test 参数，判断是进行模型训练还是模型测试。
-# if paras.test != True:
-#     trainer = Trainer(config, paras, train_x, train_y, vali_x, vali_y, Mtrain_CWE_types)
-#     trainer.exec()
-
-#     tester = Tester(config, paras, test_x, test_y, Mtest_CWE_types)
-#     tester.exec()
-# else:
-#     tester = Tester(config, paras, test_x, test_y, Mtest_CWE_types)
-#     tester.exec()
 
 K.clear_session()
 LogOutputFile.close()

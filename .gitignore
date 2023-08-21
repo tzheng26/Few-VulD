@@ -5,8 +5,12 @@ core.*
 /train_vali_test/
 /logs/
 /Models/
+/sync.sh
+/result_analysis/
+/w2v/
 
-
+# Vscode
+.vscode/
 
 # python template:
 # Byte-compiled / optimized / DLL files
