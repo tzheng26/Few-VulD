@@ -1,5 +1,5 @@
 model_settings:
-  model: "LSTM" # Choose the model to be trained (currently, the code supports the DNN, RNNs (i.e., LSTM and GRU ), BiRNN (i.e., bidirectional LSTM and bidirectional GRU), and textCNN)
+  model: "LSTM" # Choose the model to be trained (currently, the code supports the DNN, RNNs (i.e., LSTM and GRU ), BiRNN (i.e., bidirectional LSTM and bidirectional GRU))
   optimizer:
     type: "sgd" # Optimizer used for training (SGD)
     #learning_rate: 0.0001                     # Learning rate for opt
@@ -21,7 +21,8 @@ training_settings:
     Validation_set_ratio: 0.2 # Use part of the training set as the validation set.
   network_config:
     batch_size: 4
-    epochs: 150
+    k_shot: 1
+    epochs: 50
     patcience: 35
     save_training_history: True
     plot_training_history: True
@@ -33,5 +34,5 @@ training_settings:
   test_set_path: "test/"
   period_of_saving: 1
   log_path: "logs/"
-  model_save_path: "Models" #没用上。当前训练好的模型被保存在 Models/ 文件夹下
+  model_save_path: "Models/" #没用上。当前训练好的模型被保存在 Models/ 文件夹下
   model_saved_name: "test_model_LSTM"

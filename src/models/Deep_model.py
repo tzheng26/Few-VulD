@@ -38,25 +38,19 @@ class Deep_model(object):
         ]
 
         # Load the model.
-        print("-------------------------------------------------------")
         if config['model_settings']['model'] == 'DNN':
-            print("Loading the " + config['model_settings']['model'] + " model.")
             self.meta_model = self.build_DNN(word_index, embedding_matrix)
         if config['model_settings']['model'] == 'GRU':
-            print("Loading the " + config['model_settings']['model'] + " model.")
             self.meta_model = self.build_GRU(word_index, embedding_matrix)
         if config['model_settings']['model'] == 'LSTM':
-            print("Loading the " + config['model_settings']['model'] + " model.")
             self.meta_model = self.build_LSTM(word_index, embedding_matrix)
         if config['model_settings']['model'] == 'BiGRU':
-            print("Loading the " + config['model_settings']['model'] + " model.")
             self.meta_model = self.build_BiGRU(word_index, embedding_matrix)
         if config['model_settings']['model'] == 'BiLSTM':
-            print("Loading the " + config['model_settings']['model'] + " model.")
             self.meta_model = self.build_BiLSTM(word_index, embedding_matrix)
         # if config['model_settings']['model'] == 'textCNN':
-        #    print ("Loading the " + self.config['model_settings']['model'] + " model.")
-        #    self.model = test_CNN.buildModel(word_index, embedding_matrix)
+        #     print("Loading the " + self.config['model_settings']['model'] + " model.")
+        #     self.meta_model = self.buildModel(word_index, embedding_matrix)
 
     # 基于keras定义各个模型
     def build_DNN(self, word_index, embedding_matrix):

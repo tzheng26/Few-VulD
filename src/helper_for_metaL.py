@@ -40,258 +40,252 @@ class Helper:
 
         now = datetime.datetime.now()
 
-        """config 定义的参数"""
-        # path of the pre-trained tokenizer and w2v model
-        self.tokenizer_path = self.config['training_settings']['tokenizer_path']
-        self.embed_path = self.config['training_settings']['embedding_model_path']
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Word2vec Info:")
-        self.verbose("Path to the tokenizer: " + self.tokenizer_path)
-        self.verbose("Path to the embeding model: " + self.embed_path)
-
-        # By default, transfer tokens to 100-d vectors
-        self.embed_dim = self.config['model_settings']['model_para']['embedding_dim']
-
-        # # 模型保存路径
-        # # TODO: 没用上，看和下面的怎么合并
-        # if not os.path.exists(self.config['training_settings']['model_save_path']):
-        #     os.makedirs(self.config['training_settings']['model_save_path'])
-
-        # 保存训练模型的路径和名称
-        if not os.path.exists(self.config['training_settings']['model_save_path']):
-            os.makedirs(self.config['training_settings']['model_save_path'])
-        self.model_name = (
-            self.config['training_settings']['model_save_path']
-            + os.sep
-            + self.config['model_settings']['model']
+        # Experiment Scheme Info:
+        self.verbose(
+            "==================================================================="
         )
-
-        # date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-        # self.model_name = (
-        #     "Models/"
-        #     + self.config['model_settings']['model']
-        #     + "/"
-        #     + date
-        #     + "/mamlMetaFormal"
-        #     + self.config['model_settings']['model']
-        # )
-        # # check model save folder
-        # if not os.path.exists(
-        #     "Models/" + self.config['model_settings']['model'] + "/" + date
-        # ):
-        #     os.makedirs("Models/" + self.config['model_settings']['model'] + "/" + date)
-        # self.verbose("-------------------------------------------------------")
-        # self.verbose(
-        #     "Model save path: "
-        #     + "Models/"
-        #     + self.config['model_settings']['model']
-        #     + "/"
-        #     + date
-        # )
-
-        # 一个batch几个任务 (即，元学习中使用的CWE类型数量)
+        self.verbose("Experiment Scheme Info:")
+        self.experiment_scheme = self.paras.experiment_scheme
+        # Only output the experiment scheme while spliting training, validation, and test data
+        if self.paras.train_or_test == None:
+            self.verbose("Experiment Scheme: " + self.experiment_scheme)
+        # Meta batch size:
+        # i.e., how many CWE types are learned during meta-training.
         self.batch_s = self.config['training_settings']['network_config']['batch_size']
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Batch size: " + str(self.batch_s))
+        self.verbose("Meta batch size: " + str(self.batch_s))
+        if self.paras.train_or_test != None:
+            self.k_shot = self.config['training_settings']['network_config']['k_shot']
+            self.verbose("K-shot: " + str(self.k_shot))
 
-        """para 定义的参数"""
-        # The output path of the trained network model. 输出到 result/里
-        # TODO: 没用上,后续可以改成和上面设置的模型保存路径一致
-        # if not os.path.exists(self.paras.output_dir):
-        #     os.makedirs(self.paras.output_dir)
+        if self.paras.train_or_test == None:
+            # Load Preprocessed Dataset:
+            # (token sequences and labels):
+            self.verbose(
+                "==================================================================="
+            )
+            self.verbose("Dataset Info:")
+            self.verbose(
+                "Loading preprocessed dataset (with token sequences and labels) ..."
+            )
+            if self.paras.dataset == None:
+                self.verbose("Error! The dataset file is not specified!")
+                sys.exit(1)
+            else:
+                if not os.path.isfile(self.paras.dataset):
+                    self.verbose("Error! The dataset file does not exist!")
+                    sys.exit(1)
+                else:
+                    self.verbose("Path to the dataset: " + self.paras.dataset)
+                    if "Data_six" in self.paras.dataset:
+                        self.type_dataset = "Data_six"
+                    elif "SARD_4" in self.paras.dataset:
+                        self.type_dataset = "SARD_4"
+                    elif "SARD" in self.paras.dataset:
+                        self.type_dataset = "SARD"
+                    else:
+                        self.type_dataset = "Not_Data_six"
+                    self.verbose("Dataset type: " + self.type_dataset)
+                    with open(self.paras.dataset, "rb") as f:
+                        self.candi_data = pickle.load(f)
+                    self.verbose("Preprocessed dataset loaded!")
+                    # Print the CWE type info (not suitable for SARD_4)
+                    # if self.type_dataset != "SARD_4":
+                    #     list_CWE_types = list(self.candi_data.keys())[:-1]  # 最后一个key是benign
+                    #     self.verbose(
+                    #         "The dataset has totally "
+                    #         + str(len(list_CWE_types))
+                    #         + " types of CWEs, which are:"
+                    #     )
+                    #     self.verbose(list_CWE_types)
+        else:
+            self.verbose(
+                "==================================================================="
+            )
+            self.verbose("Dataset Info:")
+            self.verbose("Loading train, vali, test sets...")
+            if self.paras.train_vali_test_load == None:
+                self.verbose(
+                    "Error! The train, vali, test dataset file is not specified!"
+                )
+                sys.exit(1)
+            else:
+                if not os.path.isfile(self.paras.train_vali_test_load):
+                    self.verbose(
+                        "Error! The train, vali, test dataset file does not exist!"
+                    )
+                    sys.exit(1)
+                else:
+                    self.verbose(
+                        "Path to the train, vali, test dataset: "
+                        + self.paras.train_vali_test_load
+                    )
+                    with open(self.paras.train_vali_test_load, "rb") as f:
+                        loaded_data = pickle.load(f)
+                    self.train_x = loaded_data["train_x"]
+                    self.train_y = loaded_data["train_y"]
+                    self.vali_x = loaded_data["vali_x"]
+                    self.vali_y = loaded_data["vali_y"]
+                    self.test_x = loaded_data["test_x"]
+                    self.test_y = loaded_data["test_y"]
+                    self.Mtrain_CWE_types = loaded_data["Meta_train_CWE_types"]
+                    self.Mtest_CWE_types = loaded_data["Meta_test_CWE_types"]
+                    self.verbose("Train, vali, test dataset loaded!")
+                    # 实验的训练、测试漏洞类型：
+                    self.verbose("Meta-training CWE types:")
+                    self.verbose(self.Mtrain_CWE_types)
+                    self.verbose("Meta-testing CWE types:")
+                    self.verbose(self.Mtest_CWE_types)
 
-        # 日志
+        # Log save path:
+        # TODO: 可删除
         if not os.path.exists(self.paras.logdir):
             os.makedirs(self.paras.logdir)
 
-        # 载入预处理好的数据集，输出数据集所在目录：
-        if self.paras.dataset != None:
-            # 数据集名
-            if "Data_six" in self.paras.dataset:
-                self.type_dataset = "Data_six"
-            elif "SARD_4" in self.paras.dataset:
-                self.type_dataset = "SARD_4"
-            elif "SARD" in self.paras.dataset:
-                self.type_dataset = "SARD"
-            else:
-                self.type_dataset = "Not_Data_six"
-            # 读取数据集
-            with open(self.paras.dataset, "rb") as f:
-                self.candi_data = pickle.load(f)
-            self.verbose("-------------------------------------------------------")
-            self.verbose("Preprocessed Data Loaded!")
-            self.verbose("Path to the dataset: " + self.paras.dataset)
-            self.verbose("Type of dataset: " + self.type_dataset)
-            # 数据集包含的漏洞类型（不适用于SARD_4）
-            if self.type_dataset != "SARD_4":
-                list_CWE_types = list(self.candi_data.keys())[:-1]  # 最后一个key是benign
-                self.verbose(
-                    "The dataset has totally "
-                    + str(len(list_CWE_types))
-                    + " types of CWEs, which are:"
-                )
-                self.verbose(list_CWE_types)
-
-        # 根据 main_meta.py 的参数，载入实验方案
-        self.experiment_scheme = self.paras.experiment_scheme
-        if (
-            self.paras.train_or_test == None
-        ):  # 如果是训练、测试就不输出实验方案了，因为参数里并不需要指定实验方案，如果输出则是默认的实验方案参数，容易误导
-            self.verbose("-------------------------------------------------------")
-            self.verbose("Experiment Scheme: " + self.experiment_scheme)
-
-        # 设定随机种子
+        # Set random seed:
         nu = self.paras.seed
         random.seed(nu)
 
-    """
-    TODO: 可删除
-    分割训练、验证、测试数据集；比例：0.6:0.2:0.2
-    后面还要再看！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-    """
+    # def patitionData(self, data_list_pad, data_list_id):
+    #     """
+    #     TODO: 可删除
+    #     分割训练、验证、测试数据集；比例：0.6:0.2:0.2
+    #     后面还要再看！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+    #     """
+    #     test_size = self.config['training_settings']['dataset_config']['Test_set_ratio']
+    #     validation_size = self.config['training_settings']['dataset_config'][
+    #         'Test_set_ratio'
+    #     ]
 
-    def patitionData(self, data_list_pad, data_list_id):
-        test_size = self.config['training_settings']['dataset_config']['Test_set_ratio']
-        validation_size = self.config['training_settings']['dataset_config'][
-            'Test_set_ratio'
-        ]
+    #     # 调用 DataLoader.py 中的 GenerateLabels 函数，根据文件名中是否包含cve，分配标签 1 或 0
+    #     data_list_label = GenerateLabels(data_list_id)
+    #     # print(data_list_label[:5])
 
-        # 调用 DataLoader.py 中的 GenerateLabels 函数，根据文件名中是否包含cve，分配标签 1 或 0
-        data_list_label = GenerateLabels(data_list_id)
-        # print(data_list_label[:5])
+    #     # 从数据集中划分测试集。
+    #     if not self.config['training_settings']['using_separate_test_set']:
+    #         # The value of the seed for testing should be the same to that was used during the training phase.
+    #         (
+    #             train_vali_set_x,
+    #             test_set_x,
+    #             train_vali_set_y,
+    #             test_set_y,
+    #             train_vali_set_id,
+    #             test_set_id,
+    #         ) = train_test_split(
+    #             data_list_pad,
+    #             data_list_label,
+    #             data_list_id,
+    #             test_size=test_size,
+    #             random_state=self.paras.seed,
+    #         )
+    #         (
+    #             train_set_x,
+    #             validation_set_x,
+    #             train_set_y,
+    #             validation_set_y,
+    #             train_set_id,
+    #             validation_set_id,
+    #         ) = train_test_split(
+    #             train_vali_set_x,
+    #             train_vali_set_y,
+    #             train_vali_set_id,
+    #             test_size=validation_size,
+    #             random_state=self.paras.seed,
+    #         )
 
-        # 从数据集中划分测试集。
-        if not self.config['training_settings']['using_separate_test_set']:
-            # The value of the seed for testing should be the same to that was used during the training phase.
-            (
-                train_vali_set_x,
-                test_set_x,
-                train_vali_set_y,
-                test_set_y,
-                train_vali_set_id,
-                test_set_id,
-            ) = train_test_split(
-                data_list_pad,
-                data_list_label,
-                data_list_id,
-                test_size=test_size,
-                random_state=self.paras.seed,
-            )
-            (
-                train_set_x,
-                validation_set_x,
-                train_set_y,
-                validation_set_y,
-                train_set_id,
-                validation_set_id,
-            ) = train_test_split(
-                train_vali_set_x,
-                train_vali_set_y,
-                train_vali_set_id,
-                test_size=validation_size,
-                random_state=self.paras.seed,
-            )
-
-            tuple_with_test = (
-                train_set_x,
-                train_set_y,
-                train_set_id,
-                validation_set_x,
-                validation_set_y,
-                validation_set_id,
-                test_set_x,
-                test_set_y,
-                test_set_id,
-            )
-            setattr(self, 'patitioned_data', tuple_with_test)
-            return tuple_with_test
-        else:
-            (
-                train_set_x,
-                validation_set_x,
-                train_set_y,
-                validation_set_y,
-                train_set_id,
-                validation_set_id,
-            ) = train_test_split(
-                train_vali_set_x,
-                train_vali_set_y,
-                train_vali_set_id,
-                test_size=validation_size,
-                random_state=self.paras.seed,
-            )
-            tuple_without_test = (
-                train_set_x,
-                train_set_y,
-                train_set_id,
-                validation_set_x,
-                validation_set_y,
-                validation_set_id,
-            )
-            setattr(self, 'patitioned_data', tuple_without_test)
-            return tuple_without_test
-
-    """标准化输出显示"""
+    #         tuple_with_test = (
+    #             train_set_x,
+    #             train_set_y,
+    #             train_set_id,
+    #             validation_set_x,
+    #             validation_set_y,
+    #             validation_set_id,
+    #             test_set_x,
+    #             test_set_y,
+    #             test_set_id,
+    #         )
+    #         setattr(self, 'patitioned_data', tuple_with_test)
+    #         return tuple_with_test
+    #     else:
+    #         (
+    #             train_set_x,
+    #             validation_set_x,
+    #             train_set_y,
+    #             validation_set_y,
+    #             train_set_id,
+    #             validation_set_id,
+    #         ) = train_test_split(
+    #             train_vali_set_x,
+    #             train_vali_set_y,
+    #             train_vali_set_id,
+    #             test_size=validation_size,
+    #             random_state=self.paras.seed,
+    #         )
+    #         tuple_without_test = (
+    #             train_set_x,
+    #             train_set_y,
+    #             train_set_id,
+    #             validation_set_x,
+    #             validation_set_y,
+    #             validation_set_id,
+    #         )
+    #         setattr(self, 'patitioned_data', tuple_without_test)
+    #         return tuple_without_test
 
     def verbose(self, msg):
         '''Verbose function for print information to stdout'''
         if self.paras.verbose == 1:
             print('[INFO]', msg)
 
-    """
-    TODO: 看后面还要不要
-    运行Word_to_vec_embedding.py 后生成的 tokenizer，实现了文本的序列化
-    """
+    # def tokenization(self, data_list):
+    #     """
+    #     TODO: 看后面还要不要
+    #     运行Word_to_vec_embedding.py 后生成的 tokenizer，实现了文本的序列化
+    #     """
+    #     # 这个文件应该是是运行Word_to_vec_embedding.py后生成的 tokenizer
+    #     tokenizer = LoadPickleData(self.tokenizer_path)
+    #     # 把原来的代码文本序列转化为对应的数字序列
+    #     total_sequences = tokenizer.texts_to_sequences(data_list)
+    #     # 各个word的索引index，如 "something to eat", something: 1, to: 2, eat: 3
+    #     word_index = tokenizer.word_index
 
-    def tokenization(self, data_list):
-        # 这个文件应该是是运行Word_to_vec_embedding.py后生成的 tokenizer
-        tokenizer = LoadPickleData(self.tokenizer_path)
-        # 把原来的代码文本序列转化为对应的数字序列
-        total_sequences = tokenizer.texts_to_sequences(data_list)
-        # 各个word的索引index，如 "something to eat", something: 1, to: 2, eat: 3
-        word_index = tokenizer.word_index
+    #     return total_sequences, word_index
 
-        return total_sequences, word_index
+    # def padding(self, sequences_to_pad):
+    #     """
+    #     TODO: 后面也没用到
+    #     补零
+    #     补到 max_sequence_length (default 1000)
+    #     最后应该每个程序是1000*100的向量，即1000个词，每个词用100维的向量表示。
+    #     """
+    #     padded_seq = pad_sequences(
+    #         sequences_to_pad,
+    #         maxlen=self.config['model_settings']['model_para']['max_sequence_length'],
+    #         padding='post',
+    #     )
+    #     return padded_seq
 
-    """
-    TODO: 后面也没用到
-    补零
-    补到 max_sequence_length (default 1000)
-    最后应该每个程序是1000*100的向量，即1000个词，每个词用100维的向量表示。
-    """
-
-    def padding(self, sequences_to_pad):
-        padded_seq = pad_sequences(
-            sequences_to_pad,
-            maxlen=self.config['model_settings']['model_para']['max_sequence_length'],
-            padding='post',
-        )
-        return padded_seq
-
-    """
-    TODO: 看还要不要
-    调用 DataLoader.py 中的 getCFilesFromText() 函数，获取 .c 文件名与文件内容列表
-    应该需要更改！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
-    """
-
-    def loadData(self, data_path):
-        '''Load data for training/validation'''
-        self.verbose('Loading data from ' + os.getcwd() + os.sep + data_path + '....')
-        total_list, total_list_id = getCFilesFromText(data_path)
-        self.verbose("The length of the loaded data list is : " + str(len(total_list)))
-        # print(total_list[0])
-        # print(total_list_id[:5])
-        return total_list, total_list_id
-
-    """
-    apply Embedding
-    word_index 表示训练文本字典中的每个词对应的编号
-    返回一个嵌入矩阵（数组）-- embedding_matrix: 
-        词典中每个词的编号及对应的 100-d embedding vector
-        len(word_index) + 1 行, self.embed_dim (100)列
-    """
+    # def loadData(self, data_path):
+    #     """
+    #     TODO: 看还要不要
+    #     调用 DataLoader.py 中的 getCFilesFromText() 函数，获取 .c 文件名与文件内容列表
+    #     应该需要更改！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+    #     """
+    #     '''Load data for training/validation'''
+    #     self.verbose('Loading data from ' + os.getcwd() + os.sep + data_path + '....')
+    #     total_list, total_list_id = getCFilesFromText(data_path)
+    #     self.verbose("The length of the loaded data list is : " + str(len(total_list)))
+    #     # print(total_list[0])
+    #     # print(total_list_id[:5])
+    #     return total_list, total_list_id
 
     def applyEmbedding(self, w2v_model, word_index):
+        """
+        apply Embedding
+        word_index 表示训练文本字典中的每个词对应的编号
+        返回一个嵌入矩阵（数组）-- embedding_matrix:
+            词典中每个词的编号及对应的 100-d embedding vector
+            len(word_index) + 1 行, self.embed_dim (100)列
+        """
         # a dictionary, key: word i.e. 'int', value: its corresponding 100 dimension embedding.
         embeddings_index = {}
         # Use the loaded w2v_model
@@ -316,13 +310,26 @@ class Helper:
                 embedding_matrix[i] = embedding_vector
         return embedding_matrix
 
-    """
-    载入word2vec
-    applyEmbedding
-    载入学习模型
-    """
-
     def load_w2v_embed_model(self):
+        """
+        载入word2vec
+        applyEmbedding
+        载入学习模型
+        """
+        # Word2vec Info:
+        # Path to the pre-trained tokenizer and w2v model
+        self.tokenizer_path = self.config['training_settings']['tokenizer_path']
+        self.embed_path = self.config['training_settings']['embedding_model_path']
+        # By default, transfer tokens to 100-d vectors
+        self.embed_dim = self.config['model_settings']['model_para']['embedding_dim']
+        self.verbose(
+            "==================================================================="
+        )
+        self.verbose("Word2vec Info:")
+        self.verbose("Path to the tokenizer: " + self.tokenizer_path)
+        self.verbose("Path to the embeding model: " + self.embed_path)
+        self.verbose("Embedding dimension: " + str(self.embed_dim))
+
         # tokenizer 指运行 Word_to_vec_embedding.py 后生成的 tokenizer
         # tokenzier的路径应当在config.yaml文件中定义
         # TODO 这部分在父类中定义了单独的函数 tokenization（），应优化！！！！！！！！！
@@ -332,8 +339,7 @@ class Helper:
         word_index = self.word_index  # 每个词的数字表示
 
         # 载入word2vec模型
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Loading trained Word2vec model. ")
+        self.verbose("Loading trained Word2vec model... ")
         # 配置文件中的 embedding_model_path: "w2v/SARD/w2v_model.txt"
         w2v_model = open(self.embed_path)
         self.verbose("The trained word2vec model: ")
@@ -343,27 +349,22 @@ class Helper:
         # 返回一个嵌入矩阵（数组）-- embedding_matrix:
         # 词典中每个词的编号及对应的 100-d embedding vector
         # len(word_index) + 1 行, self.embed_dim (100)列
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Embedding Matrix:")
         embedding_matrix = self.applyEmbedding(w2v_model, word_index)  # 向量表示
-        self.verbose("The embedding matrix of the token dictionary: ")
+        self.verbose("Word vectors of the token dictionary: ")
         print(embedding_matrix)
-        self.verbose("")
 
         # 根据 config 的设定，载入相关模型。
+        self.verbose(
+            "==================================================================="
+        )
+        self.verbose(
+            "Loading model structure: " + self.config['model_settings']['model']
+        )
         # Initialize the model class here.
         deep_model = Deep_model(self.config, word_index, embedding_matrix)
-        test_CNN = textCNN(self.config)
         model_func = deep_model.meta_model  # 相关的模型
-        # textCNN 应该暂不支持，需要特殊声明
-        if self.config['model_settings']['model'] == 'textCNN':
-            self.verbose(
-                "Loading the " + self.config['model_settings']['model'] + " model."
-            )
-            model_func = test_CNN.buildModel(word_index, embedding_matrix)
-        self.verbose("Model structure loaded.")
         model_func.summary()  # 应该是tensorflow的一个方法，能够保存训练过程以及参数分布图并在tensorboard显示
-
+        self.verbose("Model structure loaded.")
         return w2v_model, word_index, embedding_matrix, deep_model, model_func
 
     """
@@ -915,11 +916,11 @@ class Helper:
 
     def choose_scheme_sep_data(self):
         """调用实验方案选择与数据划分"""
-        self.verbose("-------------------------------------------------------")
         self.verbose(
-            "According to the experiment scheme, spliting the dataset into training, validation, and test lists."
+            "==================================================================="
         )
-        self.verbose("")
+        self.verbose("Dataset spliting Info:")
+
         # 在helper类和此处增加其他实验方案
         if self.experiment_scheme == "Random_test":
             # 随机选择的用于 meta-training 的 CWE 数据类型，以及所有用于 meta-testing 的 CWE 类型。
@@ -957,26 +958,18 @@ class Helper:
                 self.batch_s, self.type_dataset
             )
 
-        self.verbose(
-            "There are "
-            + str(len(Mtrain_CWE_types))
-            + " types of CWEs for meta_training stage."
-        )
+        self.verbose("Meta-training CWE types: ")
+        self.verbose("Number: " + str(len(Mtrain_CWE_types)))
         self.verbose(Mtrain_CWE_types)
-        self.verbose("")
-        self.verbose(
-            "There are "
-            + str(len(Mtest_CWE_types))
-            + " types of CWEs for meta_testing stage."
-        )
+        self.verbose("Meta-testing CWE types: ")
+        self.verbose("Number: " + str(len(Mtest_CWE_types)))
         self.verbose(Mtest_CWE_types)
-        self.verbose("")
 
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Split the dataset into train, vali, and test sets.")
+        self.verbose("Spliting train, vali, and test sets...")
         train_x, train_y, vali_x, vali_y, test_x, test_y = self.train_vali_test(
             Mtrain_CWE_types, Mtest_CWE_types
         )
+        self.verbose("Spliting finished.")
         return (
             train_x,
             train_y,
@@ -992,20 +985,19 @@ class Helper:
 class Trainer(Helper):
     '''Handler for complete training progress'''
 
-    def __init__(
-        self, config, paras, train_x, train_y, vali_x, vali_y, Mtrain_CWE_types
-    ):
+    # def __init__(
+    #     self, config, paras, train_x, train_y, vali_x, vali_y, Mtrain_CWE_types
+    # ):
+    def __init__(self, config, paras):
         super(Trainer, self).__init__(config, paras)
-        self.verbose("-------------------------------------------------------")
-        self.verbose("******** Prepare for Meta-Training Process ********")
         self.model_save_path = config['training_settings']['model_save_path']
         self.model_save_name = config['training_settings']['model_saved_name']
         self.log_path = config['training_settings']['log_path']
-        self.train_x = train_x
-        self.train_y = train_y
-        self.vali_x = vali_x
-        self.vali_y = vali_y
-        self.Mtrain_CWE_types = Mtrain_CWE_types
+        # self.train_x = train_x
+        # self.train_y = train_y
+        # self.vali_x = vali_x
+        # self.vali_y = vali_y
+        # self.Mtrain_CWE_types = Mtrain_CWE_types
         # random.seed(445)
 
     """ 
@@ -1069,15 +1061,17 @@ class Trainer(Helper):
             model_func,
         ) = self.load_w2v_embed_model()
 
-        # 保存训练好的模型的路径
+        # Path to save the trained model:
+        if not os.path.exists(self.config['training_settings']['model_save_path']):
+            os.makedirs(self.config['training_settings']['model_save_path'])
+        self.model_name = os.path.join(
+            self.config['training_settings']['model_save_path'],
+            self.config['model_settings']['model'],
+        )
         model_name = self.model_name
         date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-        # check model save folder
-        if not os.path.exists(model_name + "/" + date):
-            os.makedirs(model_name + "/" + date)
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Models saved to folder: " + model_name + "/" + date)
-
+        if not os.path.exists(os.path.join(model_name, date)):
+            os.makedirs(os.path.join(model_name, date))
         model_name = (
             model_name
             + "/"
@@ -1085,69 +1079,39 @@ class Trainer(Helper):
             + "/mamlMetaFormal"
             + self.config['model_settings']['model']
         )
-
-        # Loss Function
+        # Loss Function:
         loss_func = losses.BinaryCrossentropy(from_logits=False)
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Loss function has been set.")
+        # Training Epochs:
+        epo = self.config['training_settings']['network_config']['epochs']
+        # Optimizer (defined later)
 
-        # TODO:内外层优化器设定（后面又设定了一遍，选一个删掉）
-        inner_optimizer = optimizers.SGD(learning_rate=0.00001)
-        inner_optimizer = optimizers.Adam(learning_rate=0.001)  # 选用Adam
-        outer_optimizer = optimizers.SGD(learning_rate=0.00001)
-        outer_optimizer = optimizers.Adam(learning_rate=0.001)  # 选用Adam
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Optimizers has been loaded.")
+        # Print training info:
+        self.verbose(
+            "==================================================================="
+        )
+        self.verbose("Meta-training Info:")
+        self.verbose("Path to save trained models: " + model_name)
+        self.verbose("Loss function: BinaryCrossentropy")
+        self.verbose("Inner optimizer: Adam")
+        self.verbose("Outer optimizer: Adam")
+        self.verbose("Training epochs: " + str(epo))
 
-        # 训练轮数
-        epo = 50  # 训练50轮，有50个.h5文件。
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Training epoes has been set: " + str(epo))
-
-        # Meta-training 阶段伪代码
-        # ---------------------------------------
-        # 当前训练数据：candi_data
-        # candi_data["meta_training"]
-        # # 实验方案 1:随机测试——即从数据集中样本多的漏洞类型中随机选四类CWE作为训练任务，样本少的其他漏洞类型作为测试任务
-        #
-        # if experiment_scheme == "Random_test":
-        #     # meta_training 中随机选中的CWE类型，及 meta_testing中待测试的CWE类型
-        #     self.Random_Scheme_Data_six
-        #
-        #     # epo = 50
-        #     # steps = 50
-        #     for e in range(epo):
-        #         # meta_training 中的 train
-        #         for i in range(steps):
-        #             get_one_meta_batch(T1,T2,T3,T4)
-        #             train_on_one_batch
-        #         # 综合训练结果
-        #         print("train result:")
-
-        #         # meta_training 中的 valificatjion
-        #         for i in range(steps/5*2):
-        #             get_one_meta_batch(T1,T2,T3,T4)
-        #             train_on_one_batch
-        #         # 综合验证结果
-        #         print("vali result:")
+        # Start Training:
+        self.verbose(
+            "==================================================================="
+        )
+        self.verbose("Start Meta-Training...")
+        # Process the dataset into meta batches
         train_x = self.train_x
         train_y = self.train_y
         vali_x = self.vali_x
         vali_y = self.vali_y
         Mtrain_CWE_types = self.Mtrain_CWE_types
-
-        # 按元学习的任务和batch划分
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Process the dataset into meta batches.")
         train_data = MAMLDataLoader(train_x, train_y)
         vali_data = MAMLDataLoader(vali_x, vali_y)
 
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Start Meta-Training...")
-
-        epo_time = []
-
         # 将每个epo训练、验证模型的表现保存到数组
+        epo_time = []
         epos_train_loss = []
         epos_train_acc = []
         epos_train_rec = []
@@ -1180,7 +1144,7 @@ class Trainer(Helper):
             else:
                 lr = 0.4 * origin_lr
 
-            # TODO:内、外层优化器设定（前面设定过了，选一个位置删掉）
+            # 内、外层优化器设定
             inner_optimizer = optimizers.Adam(learning_rate=lr)
             outer_optimizer = optimizers.Adam(learning_rate=lr)
 
@@ -1397,7 +1361,6 @@ class Trainer(Helper):
             print("Time for this epo:")
             print(epo_interval)
             epo_time.append(epo_interval)
-            print()
 
             # 将每个epo训练模型的表现保存到数组
             epos_train_loss.append(np.mean(train_meta_loss))
@@ -1505,117 +1468,6 @@ class Trainer(Helper):
             + os.sep
             + "metrics.png"
         )
-
-        # fig, axes = plt.subplots(nrows=2, ncols=4)
-        # axes[0, 0].plot(epos_train_loss, label="train_loss")
-        # axes[0, 0].plot(epos_vali_loss, label="vali_loss")
-        # axes[0, 0].set_xlabel("epos")
-        # axes[0, 0].set_ylabel("loss")
-        # axes[0, 0].legend()
-
-        # axes[0, 1].plot(epos_train_acc, label="train_acc")
-        # axes[0, 1].plot(epos_vali_acc, label="vali_acc")
-        # axes[0, 1].set_xlabel("epos")
-        # axes[0, 1].set_ylabel("acc")
-        # axes[0, 1].legend()
-
-        # axes[0, 2].plot(epos_train_rec, label="train_rec")
-        # axes[0, 2].plot(epos_vali_rec, label="vali_rec")
-        # axes[0, 2].set_xlabel("epos")
-        # axes[0, 2].set_ylabel("rec")
-        # axes[0, 2].legend()
-
-        # axes[0, 3].plot(epos_train_pre, label="train_pre")
-        # axes[0, 3].plot(epos_vali_pre, label="vali_pre")
-        # axes[0, 3].set_xlabel("epos")
-        # axes[0, 3].set_ylabel("pre")
-        # axes[0, 3].legend()
-
-        # axes[1, 0].plot(epos_train_TNR, label="train_TNR")
-        # axes[1, 0].plot(epos_vali_TNR, label="vali_TNR")
-        # axes[1, 0].set_xlabel("epos")
-        # axes[1, 0].set_ylabel("TNR")
-        # axes[1, 0].legend()
-
-        # axes[1, 1].plot(epos_train_FPR, label="train_FPR")
-        # axes[1, 1].plot(epos_vali_FPR, label="vali_FPR")
-        # axes[1, 1].set_xlabel("epos")
-        # axes[1, 1].set_ylabel("FPR")
-        # axes[1, 1].legend()
-
-        # axes[1, 2].plot(epos_train_FNR, label="train_FNR")
-        # axes[1, 2].plot(epos_vali_FNR, label="vali_FNR")
-        # axes[1, 2].set_xlabel("epos")
-        # axes[1, 2].set_ylabel("FNR")
-        # axes[1, 2].legend()
-
-        # axes[1, 3].plot(epos_train_F1, label="train_F1")
-        # axes[1, 3].plot(epos_vali_F1, label="vali_F1")
-        # axes[1, 3].set_xlabel("epos")
-        # axes[1, 3].set_ylabel("F1")
-
-        # graph_save_path = (
-        #     "result_analysis/Graphs"
-        #     + os.sep
-        #     + self.config['model_settings']['model']
-        #     + os.sep
-        #     + "Meta-training"
-        #     + os.sep
-        #     + date
-        #     + os.sep
-        #     + "metrics_epos"
-        # )
-        # if not os.path.exists(graph_save_path):
-        #     os.makedirs(graph_save_path)
-        # plt.savefig(graph_save_path + os.sep + "metrics.png")
-        # plt.close()
-
-        # # 画出模型训练、验证过程中的loss随epo的变化图
-        # plt.figure()
-        # plt.plot(epos_train_loss, label="train_loss")
-        # plt.plot(epos_vali_loss, label="vali_loss")
-        # plt.xlabel("epos")
-        # plt.ylabel("loss")
-        # plt.legend()
-        # graph_save_path = (
-        #     "result_analysis/Graphs"
-        #     + os.sep
-        #     + self.config['model_settings']['model']
-        #     + os.sep
-        #     + "Meta-training"
-        #     + os.sep
-        #     + date
-        #     + os.sep
-        #     + "loss_epos"
-        # )
-        # if not os.path.exists(graph_save_path):
-        #     os.makedirs(graph_save_path)
-        # plt.savefig(graph_save_path + os.sep + "loss.png")
-        # plt.close()
-
-        # # 画出模型训练、验证过程中的F1随epo的变化图
-        # plt.figure()
-        # plt.plot(epos_train_F1, label="train_F1")
-        # plt.plot(epos_vali_F1, label="vali_F1")
-        # plt.xlabel("epos")
-        # plt.ylabel("F1")
-        # plt.legend()
-        # graph_save_path = (
-        #     "result_analysis/Graphs"
-        #     + os.sep
-        #     + self.config['model_settings']['model']
-        #     + os.sep
-        #     + "Meta-training"
-        #     + os.sep
-        #     + date
-        #     + os.sep
-        #     + "F1_epos"
-        # )
-        # if not os.path.exists(graph_save_path):
-        #     os.makedirs(graph_save_path)
-        # plt.savefig(graph_save_path + os.sep + "F1.png")
-        # plt.close()
-
         return
 
         # TODO!!!!!!!!
@@ -1628,22 +1480,20 @@ class Trainer(Helper):
         #    class_weights = None
 
 
-# ===========================================================================================
 class Tester(Helper):
     '''Handler for complete inference progress'''
 
-    def __init__(
-        self, config, paras, test_x, test_y, Mtrain_CWE_types, Mtest_CWE_types
-    ):
+    # def __init__(
+    #     self, config, paras, test_x, test_y, Mtrain_CWE_types, Mtest_CWE_types
+    # ):
+    def __init__(self, config, paras):
         super(Tester, self).__init__(config, paras)
-        self.verbose("-------------------------------------------------------")
-        self.verbose("********** Prepare for Meta-Testing Process **********")
-        self.test_x = test_x
-        self.test_y = test_y
-        self.Mtrain_CWE_types = Mtrain_CWE_types
-        self.Mtest_CWE_types = Mtest_CWE_types
+        # self.test_x = test_x
+        # self.test_y = test_y
+        # self.Mtrain_CWE_types = Mtrain_CWE_types
+        # self.Mtest_CWE_types = Mtest_CWE_types
 
-        # 输出实验日期
+        # 记录实验日期
         now = datetime.datetime.now()
         # self.verbose("Experiment Date: " + now.strftime("%m/%d/%Y %H:%M:%S"))
 
@@ -1762,23 +1612,46 @@ class Tester(Helper):
         #     + '_result.csv',
         # )
 
-        # 实验结果保存路径（保存训练、测试漏洞类型，k值，各漏洞类型的实验结果，使用的哪一个模型等）
+        # Record experiment settings and results:
+        js_exp_result = {}
+        js_exp_result["Experiment Settings"] = {}
+        js_exp_result["Experiment Results"] = {}
+        js_exp_result["Experiment Settings"][
+            "Meta-training CWE types"
+        ] = self.Mtrain_CWE_types
+        js_exp_result["Experiment Settings"][
+            "Meta-testing CWE types"
+        ] = self.Mtest_CWE_types
+
+        # Load w2v and deep learning model structure:
+        (
+            w2v_model,
+            word_index,
+            embedding_matrix,
+            deep_model,
+            model_func,
+        ) = self.load_w2v_embed_model()
+
+        # Load model weights:
+        self.verbose("Loading model weights... ")
+        load_name = self.paras.trained_model
+        try:
+            deep_model.meta_model.load_weights(load_name)  # 仅读取权重
+            self.verbose("Model weights loaded.")
+        except OSError:
+            self.verbose(
+                "Error! The given model does not exist. Please select another one!"
+            )
+            exit(3)
+        js_exp_result["Experiment Settings"]["Loaded Model"] = load_name
+
+        # Other info about meta testing:
+        self.verbose(
+            "==================================================================="
+        )
+        self.verbose("Meta-testing Info:")
+        # Experiment data save path:
         date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-
-        # experiment_result_path = "experiment_result"
-        # if not os.path.isdir(experiment_result_path):
-        #     os.makedirs(experiment_result_path)
-        # experiment_result_filename = date + '.json'
-        # if os.path.isfile(experiment_result_path + os.sep + experiment_result_filename):
-        #     experiment_result_filename = (
-        #         os.path.splitext(experiment_result_filename)[0]
-        #         + "_new"
-        #         + os.path.splitext(experiment_result_filename)[1]
-        #     )
-        # experiment_result_path = (
-        #     experiment_result_path + os.sep + experiment_result_filename
-        # )
-
         experiment_result_path = (
             "result_analysis"
             + os.sep
@@ -1794,81 +1667,34 @@ class Tester(Helper):
         experiment_result_path = (
             experiment_result_path + os.sep + experiment_result_filename
         )
-        self.verbose("Saving experiment result to " + experiment_result_path)
-
-        js_exp_result = {}
-        js_exp_result["Experiment Settings"] = {}
-        js_exp_result["Experiment Results"] = {}
-
-        # 实验的训练、测试漏洞类型：
-        self.verbose("Meta-training CWE types:")
-        self.verbose(self.Mtrain_CWE_types)
-        self.verbose("Meta-testing CWE types:")
-        self.verbose(self.Mtest_CWE_types)
-
-        js_exp_result["Experiment Settings"][
-            "Meta-training CWE types"
-        ] = self.Mtrain_CWE_types
-        js_exp_result["Experiment Settings"][
-            "Meta-testing CWE types"
-        ] = self.Mtest_CWE_types
-
-        (
-            w2v_model,
-            word_index,
-            embedding_matrix,
-            deep_model,
-            model_func,
-        ) = self.load_w2v_embed_model()
-
-        # 加载测试模型
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Loading deep learning model. ")
-        # loadModelNum = 0
-        # # 路径 e.g., Models/BiGRU/mamlMetaFormalBiGRU
-        # model_name = self.model_name
-        # # main.meta.py 是否指定了 --model_num 参数
-        # # 可以选择特定的模型进行测试
-        # if self.paras.model_num != None:
-        #     loadModelNum = self.paras.model_num
-        # else:
-        #     self.verbose(
-        #         "Error! Please name the index of model that you want to test using the --model_num parameter!"
-        #     )
-        #     exit(2)
-        # load_name = model_name + str(loadModelNum) + ".h5"
-
-        load_name = self.paras.trained_model
-        try:
-            deep_model.meta_model.load_weights(load_name)  # 仅读取权重
-        except OSError:
-            self.verbose(
-                "Error! The given model does not exist. Please select another one!"
-            )
-            exit(3)
-
-        js_exp_result["Experiment Settings"]["Loaded Model"] = load_name
+        self.verbose("Path to save experiment result [JSON]: " + experiment_result_path)
 
         # Loss Function
         loss_func = losses.BinaryCrossentropy(from_logits=False)
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Loss function has been set.")
+        self.verbose("Loss function: BinaryCrossentropy")
 
-        # TODO:内外层优化器设定（后面又设定了一遍，选一个删掉）
+        # 内外层优化器设定（后面又设定了一遍）
         inner_optimizer = optimizers.SGD(learning_rate=0.00001)
         inner_optimizer = optimizers.Adam(learning_rate=0.001)  # 选用Adam
         outer_optimizer = optimizers.SGD(learning_rate=0.00001)
         outer_optimizer = optimizers.Adam(learning_rate=0.001)  # 选用Adam
-        self.verbose("-------------------------------------------------------")
-        self.verbose("Optimizers has been loaded.")
+        self.verbose("Inner optimizer: Adam")
+        self.verbose("Outer optimizer: Adam")
 
+        # test data
         test_x = self.test_x
         test_y = self.test_y
         Mtest_CWE_types = self.Mtest_CWE_types
 
         # k shots for support set.
-        k = 1
+        k = self.config['training_settings']['network_config']['k_shot']
         js_exp_result["Experiment Settings"]["K"] = k
+        self.verbose("K: " + str(k))
+
+        # Repeat the experiment how many times
+        times_repeat = 10
+        js_exp_result["Experiment Settings"]["Repeat"] = times_repeat
+        self.verbose("Experiment repeat times: " + str(times_repeat))
 
         # 测试各个 CWE 的分类效果
         p = 0
@@ -1876,7 +1702,6 @@ class Tester(Helper):
             self.verbose("=======================================================")
             self.verbose("Now is testing " + CWE + "!")
             js_exp_result["Experiment Results"][CWE] = {}
-            print("value of p", p)
 
             # Support set
             # how many samples in this cwe type
@@ -1915,8 +1740,8 @@ class Tester(Helper):
             list_all_test_support_interval = []
             list_all_mean_test_query = []
 
-            # Repeat the experiment 10 times
-            for test_round in range(10):
+            # Repeat the experiment multiple times
+            for test_round in range(times_repeat):
                 self.verbose("-------------------------------------------------------")
                 self.verbose("Experiment round:" + str(test_round))
 
@@ -2025,12 +1850,12 @@ class Tester(Helper):
                 )
 
                 print(
-                    "query_label: ",
-                    query_label,
-                    "prb_pred: ",
-                    prb_pred,
-                    "ppred: ",
-                    ppred,
+                    # "query_label: ",
+                    # query_label,
+                    # "prb_pred: ",
+                    # prb_pred,
+                    # "ppred: ",
+                    # ppred,
                     "Loss: ",
                     type_loss,
                     "Accuracy: ",
@@ -2071,7 +1896,7 @@ class Tester(Helper):
                 list_all_test_support_interval.append(test_support_interval)
                 list_all_mean_test_query.append(mean_test_query)
 
-            # 计算10次实验的平均值
+            # 计算多次实验的平均值
             average_loss = np.mean(list_all_loss)
             average_acc = np.mean(list_all_acc)
             average_recall = np.mean(list_all_recall)
@@ -2083,7 +1908,9 @@ class Tester(Helper):
             average_test_support_interval = np.mean(list_all_test_support_interval)
             average_mean_test_query = np.mean(list_all_mean_test_query)
             self.verbose("-------------------------------------------------------")
-            self.verbose("Conclusion -- The test result after 10 rounds:")
+            self.verbose(
+                "Conclusion -- The test result after " + str(times_repeat) + " rounds:"
+            )
             print("Average loss: ", average_loss)
             print("Average accuracy: ", average_acc)
             print("Average recall: ", average_recall)

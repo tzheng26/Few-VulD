@@ -8,6 +8,7 @@ core.*
 /sync.sh
 /result_analysis/
 /w2v/
+/testfolder/
 
 # Vscode
 .vscode/
