@@ -749,6 +749,74 @@ class Helper:
 
         return Mtrain_CWE_types, Mtest_CWE_types
 
+    def Scheme_2_diff_syntax_features_SARD_4(
+        self, meta_batch, type_dataset, Syntax_1, Syntax_2
+    ):
+        """
+        针对SARD_4数据集
+        Syntax features include: API function call, Array usage, Arithmetic expression, Pointer usage
+        训练 Syntax_1 类型的CWEs
+        测试 Syntax_2 类型的CWEs
+        """
+        if type_dataset != "SARD_4":
+            self.verbose(
+                "Error! The Experiment Scheme is only suitable for dataset--SARD_4."
+            )
+            exit(0)
+
+        # Meta-training CWE types:
+        Mtrain_CWE_types = []
+        # Syntax_1 中的 CWE 类型
+        list_Syntax_1_CWEs = list(self.candi_data[Syntax_1].keys())[:-1]
+        # 获取各cwe类型样本数量和
+        dict_tmp_cwe_count = {}
+        for k in list_Syntax_1_CWEs:
+            dict_tmp_cwe_count[k] = len(self.candi_data[Syntax_1][k]["Embeddings"])
+        # 选取样本数大于等于threshold的cwe类型
+        threshold = 200
+        candi_CWEs = []
+        for k in dict_tmp_cwe_count.keys():
+            if dict_tmp_cwe_count[k] >= threshold:
+                candi_CWEs.append(k)
+        # 检查meta_batch是否大于candi_CWEs的长度
+        if meta_batch > len(candi_CWEs):
+            self.verbose("-------------------------------------------------------")
+            self.verbose(
+                "Error! Meta batch size is larger than the number of available candidate CWE types!"
+            )
+            self.verbose(
+                "Make sure it is smaller than the total number of available CWE types for meta_training stage."
+            )
+            sys.exit(1)
+        # 随机选择meta_batch个cwe类型作为训练集
+        Mtrain_CWE_types = random.sample(candi_CWEs, meta_batch)
+
+        # Meta-testing CWE types:
+        Mtest_CWE_types = []
+        # Syntax_2 中的 CWE 类型
+        list_Syntax_2_CWEs = list(self.candi_data[Syntax_2].keys())[:-1]
+        # 获取各cwe类型样本数量和
+        dict_tmp_cwe_count = {}
+        for k in list_Syntax_2_CWEs:
+            dict_tmp_cwe_count[k] = len(self.candi_data[Syntax_2][k]["Embeddings"])
+        # 选取样本数大于等于threshold的cwe类型
+        threshold = 200
+        candi_CWEs = []
+        for k in dict_tmp_cwe_count.keys():
+            if dict_tmp_cwe_count[k] >= threshold:
+                candi_CWEs.append(k)
+        # 从 candi_CWEs 中去掉已选中用于训练的类型
+        for CWE in Mtrain_CWE_types:
+            if CWE in candi_CWEs:
+                candi_CWEs.remove(CWE)
+        # 剩下的作为测试集
+        Mtest_CWE_types = candi_CWEs
+
+        if len(Mtrain_CWE_types) < meta_batch or len(Mtest_CWE_types) < 1:
+            self.verbose("Error on the number of training or testing tasks.")
+            exit(0)
+        return Mtrain_CWE_types, Mtest_CWE_types
+
     def Scheme_Data_six_test(self, meta_batch, type_dataset):
         # 拿真实数据纯测试
         Mtrain_CWE_types = []
@@ -937,10 +1005,12 @@ class Helper:
             Mtrain_CWE_types, Mtest_CWE_types = self.Scheme_Data_six_test(
                 self.batch_s, self.type_dataset
             )
+        # SARD_4: Use random CWEs for meta-training and meta-testing
         elif self.experiment_scheme == "Scheme_Random_SARD_4":
             Mtrain_CWE_types, Mtest_CWE_types = self.Scheme_Random_SARD_4(
                 self.batch_s, self.type_dataset
             )
+        # SARD_4: Use CWEs with same syntax features for meta-training and meta-testing
         elif self.experiment_scheme == "Scheme_API_SARD_4":
             Mtrain_CWE_types, Mtest_CWE_types = self.Scheme_API_SARD_4(
                 self.batch_s, self.type_dataset
@@ -957,6 +1027,122 @@ class Helper:
             Mtrain_CWE_types, Mtest_CWE_types = self.Scheme_Pointer_SARD_4(
                 self.batch_s, self.type_dataset
             )
+        # SARD_4: Use CWEs with different syntax features for meta-training and meta-testing
+        elif self.experiment_scheme == "Scheme_API_Array_SARD_4":
+            Syntax_1 = "API function call"
+            Syntax_2 = "Array usage"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_API_Arithmetic_SARD_4":
+            Syntax_1 = "API function call"
+            Syntax_2 = "Arithmetic expression"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_API_Pointer_SARD_4":
+            Syntax_1 = "API function call"
+            Syntax_2 = "Pointer usage"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Array_API_SARD_4":
+            Syntax_1 = "Array usage"
+            Syntax_2 = "API function call"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Array_Arithmetic_SARD_4":
+            Syntax_1 = "Array usage"
+            Syntax_2 = "Arithmetic expression"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Array_Pointer_SARD_4":
+            Syntax_1 = "Array usage"
+            Syntax_2 = "Pointer usage"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Arithmetic_API_SARD_4":
+            Syntax_1 = "Arithmetic expression"
+            Syntax_2 = "API function call"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Arithmetic_Array_SARD_4":
+            Syntax_1 = "Arithmetic expression"
+            Syntax_2 = "Array usage"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Arithmetic_Pointer_SARD_4":
+            Syntax_1 = "Arithmetic expression"
+            Syntax_2 = "Pointer usage"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Pointer_API_SARD_4":
+            Syntax_1 = "Pointer usage"
+            Syntax_2 = "API function call"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Pointer_Array_SARD_4":
+            Syntax_1 = "Pointer usage"
+            Syntax_2 = "Array usage"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s, self.type_dataset, Syntax_1, Syntax_2
+            )
+        elif self.experiment_scheme == "Scheme_Pointer_Arithmetic_SARD_4":
+            Syntax_1 = "Pointer usage"
+            Syntax_2 = "Arithmetic expression"
+            (
+                Mtrain_CWE_types,
+                Mtest_CWE_types,
+            ) = self.Scheme_2_diff_syntax_features_SARD_4(
+                self.batch_s,
+                self.type_dataset,
+                Syntax_1,
+                Syntax_2,
+            )
+        # Not defined schemes:
+        else:
+            self.verbose("Error! No such experiment scheme!")
+            exit(0)
 
         self.verbose("Meta-training CWE types: ")
         self.verbose("Number: " + str(len(Mtrain_CWE_types)))
@@ -1463,7 +1649,7 @@ class Trainer(Helper):
         plt.close()
 
         print(
-            "Model training process graph saved to "
+            "Model training process graph saved to: "
             + graph_save_path
             + os.sep
             + "metrics.png"

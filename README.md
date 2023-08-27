@@ -173,7 +173,7 @@ python utils.py Six_project Pre_Six_project
 
 ## **6. Code Embedding**
 
-Pretrain the **Word2Vec** Model.
+**a) Pretrain the Word2Vec Model.**
 
 Go to directory `./src/w2v`
 
@@ -208,7 +208,8 @@ For a quick start, the user could simply use the shell script `Word2vec.sh` with
 
 The result of the **w2v** model will be stored in folder `Few-VulD/w2v` by default.
 
-Transfer programs into embeddings.
+
+**b) Transfer programs into embeddings.**
 
 Run `prep.py` with the following parameters to transfer programs to token sequences and labels:
 

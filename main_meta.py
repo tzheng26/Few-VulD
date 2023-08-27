@@ -159,17 +159,16 @@ if paras.sep_train_vali_test == True:
     path = paras.train_vali_test_dump
     if not os.path.exists(path):
         os.makedirs(path)
-    else:
-        i = 0
+    i = 0
+    filename = "train_vali_test" + str(i)
+    save_path = os.path.join(path, filename)
+    while os.path.isfile(save_path):
+        i = i + 1
         filename = "train_vali_test" + str(i)
         save_path = os.path.join(path, filename)
-        while os.path.isfile(save_path):
-            i = i + 1
-            filename = "train_vali_test" + str(i)
-            save_path = os.path.join(path, filename)
-        with open(save_path, 'wb') as f:
-            pickle.dump(Dict_tra_val_test, f)
-        verbose("Train, vali, and test sets have been dumped into: " + save_path)
+    with open(save_path, 'wb') as f:
+        pickle.dump(Dict_tra_val_test, f)
+    verbose("Train, vali, and test sets have been dumped into: " + save_path)
 
 # Step 2 & 3: Meta-Training & Meta-Testing
 if paras.train_or_test != None:
