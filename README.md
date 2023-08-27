@@ -9,25 +9,31 @@ Github: [Few-shot-VulDetect ](https://github.com/tzheng26/Few-VulD)
 
 ## **1. Experiment Environment**
 
-|      Name      |            Function            |                  Version                  |
-| :------------: | :----------------------------: | :----------------------------------------: |
-|      CPU      |    Central Processing Unit    | Intel(R) Xeon(R) Silver 4310 CPU @ 2.10GHz |
-|      GPU      |    Graphics Processing Unit    |        NVIDIA GeForce RTX 3090 24G        |
-|     Ubuntu     |        Operation System        |                20.04.6 LTS                |
-|   Anaconda 3   | Python framework and libraries |                   23.5.1                   |
-|     Python     |      Programming Language      |                   3.8.13                   |
-|      CUDA      |         GPU Computing         |                    10.1                    |
-|     cuDNN     |         GPU Computing         |                   7.6.5                   |
-| Tensorflow-gpt |    Deep Learning Framework    |                   2.3.0                   |
-|     Keras     |    Deep Learning Framework    |                   1.1.2                   |
-|     Numpy     |      Scientific Computing      |                   1.18.5                   |
-|     Pandas     |         Data Analysis         |                   1.4.3                   |
-|  Scikit-learn  |        Machine Learning        |                   1.1.1                   |
-|     Gensim     |            Word2Vec            |                   3.8.3                   |
-|   matplotlib   |         Visualization         |                   3.5.2                   |
-|      yaml      |         Configuration         |                   0.2.5                   |
+The experimental environment needs to be adjusted according to the computer hardware configuration. 
+
+Our experimental equipment configuration and environment are as follows:
+
+|      Name      |            Function            |                Version                |
+| :------------: | :----------------------------: | :-----------------------------------: |
+|      CPU      |    Central Processing Unit    | 13th Gen Intel(R) Core(TM) i7-13700KF |
+|      GPU      |    Graphics Processing Unit    |    NVIDIA GeForce RTX 4070 Ti 12G    |
+|     Ubuntu     |        Operation System        |              20.04.6 LTS              |
+|   Anaconda 3   | Python framework and libraries |                23.5.2                |
+|     Python     |      Programming Language      |                3.10.8                |
+|      CUDA      |         GPU Computing         |                11.8.0                |
+|     cuDNN     |         GPU Computing         |               8.8.0.121               |
+| Tensorflow-gpu |    Deep Learning Framework    |                2.10.0                |
+|     Keras     |    Deep Learning Framework    |                2.10.0                |
+|     Numpy     |      Scientific Computing      |                1.25.2                |
+|     Pandas     |         Data Analysis         |                 2.0.3                 |
+|  Scikit-learn  |        Machine Learning        |                 1.3.0                 |
+|     Gensim     |            Word2Vec            |                 4.3.1                 |
+|   matplotlib   |         Visualization         |                 3.7.2                 |
+|      yaml      |         Configuration         |                 0.2.5                 |
 
 ## **2. Installation**
+
+We build the experiment environment with `conda`. Anaconda or mini-conda has to be installed.
 
 Create conda environment:
 
@@ -43,7 +49,11 @@ Some versions of cuda and cudnn are not involved in conda's default install chan
 ```bash
 conda config --add channels conda-forge
 conda config --set channel_priority strict
+```
 
+Install tensorflow-gpu
+
+```
 conda install tensorflow-gpu=2.10.0
 ```
 
@@ -60,26 +70,26 @@ keras-preprocessing=1.1.2
 ...
 ```
 
-Install other packages:
+Install other needed packages:
 
 ```bash
-conda install pyyaml pandas matplotlib scikit-learn
+conda install pyyaml pandas matplotlib scikit-learn tqdm gensim 
 ```
 
 ## **3. Quick Start**
 
 ```bash
 # Split dataset into training, validation, and test sets.
-./main_meta_v2.sh data
+./main_meta.sh data
 
 # Start meta-training.
-./main_meta_v2.sh train
+./main_meta.sh train
 
 # Start meta-testing.
-./main_meta_v2.sh test
+./main_meta.sh test
 
-# Result will be stored in the "terminal_result" folder.
-cat terminal_result/terminal_result.txt
+# Result will be stored in the "result_analysis" folder.
+ls result_analysis
 ```
 
 ## **4. Datasets**
@@ -207,7 +217,6 @@ For a quick start, the user could simply use the shell script `Word2vec.sh` with
 ```
 
 The result of the **w2v** model will be stored in folder `Few-VulD/w2v` by default.
-
 
 **b) Transfer programs into embeddings.**
 
