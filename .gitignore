@@ -9,7 +9,7 @@ core.*
 /result_analysis/
 /w2v/
 /testfolder/
-/main_meta.sh
+/main.sh
 
 # Vscode
 .vscode/

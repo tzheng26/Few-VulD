@@ -310,11 +310,10 @@ class Helper:
                 embedding_matrix[i] = embedding_vector
         return embedding_matrix
 
-    def load_w2v_embed_model(self):
+    def load_w2v_embed(self):
         """
         载入word2vec
         applyEmbedding
-        载入学习模型
         """
         # Word2vec Info:
         # Path to the pre-trained tokenizer and w2v model
@@ -352,7 +351,25 @@ class Helper:
         embedding_matrix = self.applyEmbedding(w2v_model, word_index)  # 向量表示
         self.verbose("Word vectors of the token dictionary: ")
         print(embedding_matrix)
+        time.sleep(5)
 
+        # # 根据 config 的设定，载入相关模型。
+        # self.verbose(
+        #     "==================================================================="
+        # )
+        # self.verbose(
+        #     "Loading model structure: " + self.config['model_settings']['model']
+        # )
+        # # Initialize the model class here.
+        # deep_model = Deep_model(self.config, word_index, embedding_matrix)
+        # model_func = deep_model.meta_model  # 相关的模型
+        # model_func.summary()  # 应该是tensorflow的一个方法，能够保存训练过程以及参数分布图并在tensorboard显示
+        # self.verbose("Model structure loaded.")
+        # return w2v_model, word_index, embedding_matrix, deep_model, model_func
+        return w2v_model, word_index, embedding_matrix
+
+    def load_deep_model(self, word_index, embedding_matrix):
+        """载入学习模型"""
         # 根据 config 的设定，载入相关模型。
         self.verbose(
             "==================================================================="
@@ -365,7 +382,7 @@ class Helper:
         model_func = deep_model.meta_model  # 相关的模型
         model_func.summary()  # 应该是tensorflow的一个方法，能够保存训练过程以及参数分布图并在tensorboard显示
         self.verbose("Model structure loaded.")
-        return w2v_model, word_index, embedding_matrix, deep_model, model_func
+        return deep_model, model_func
 
     """
     实验方案1:  随机选择训练任务 (适用 Data_six)
@@ -516,7 +533,11 @@ class Helper:
         return Mtrain_CWE_types, Mtest_CWE_types
 
     def Scheme_Random_SARD_4(self, meta_batch, type_dataset):
-        """针对 SARD_4 数据集，从数量大于一定数量的 CWE 中随机选择 meta_batch 个 CWE 作为训练集，剩下的作为测试集"""
+        """
+        针对 SARD_4 数据集
+        从数量大于一定数量的 CWE 中随机选择 meta_batch 个 CWE 作为训练集
+        剩下的作为测试集
+        """
 
         if type_dataset != "SARD_4":
             self.verbose(
@@ -567,6 +588,69 @@ class Helper:
 
         # 剩下的作为测试集
         Mtest_CWE_types = candi_CWEs
+        return Mtrain_CWE_types, Mtest_CWE_types
+
+    def Scheme_Random_M_N_SARD_4(
+        self,
+        meta_batch,
+        type_dataset,
+    ):
+        """
+        针对 SARD_4 数据集
+        从数量大于一定数量的 CWE 中随机选择 meta_batch (M)个 CWE 作为训练集
+        剩下的选 N 个CWE类型作为测试集
+        """
+        if type_dataset != "SARD_4":
+            self.verbose(
+                "Error! The Experiment Scheme is only suitable for dataset--SARD_4."
+            )
+            exit(0)
+
+        Mtrain_CWE_types = []
+        Mtest_CWE_types = []
+        M = meta_batch
+        N = 10
+
+        # 获取各cwe类型样本数量和
+        dict_tmp_cwe_count = {}
+        for syntax_feature in self.candi_data.keys():
+            for k in list(self.candi_data[syntax_feature].keys())[:-1]:  # 各 cwe 类型
+                if k not in dict_tmp_cwe_count.keys():
+                    dict_tmp_cwe_count[k] = len(
+                        self.candi_data[syntax_feature][k]["Embeddings"]
+                    )
+                else:
+                    dict_tmp_cwe_count[k] = dict_tmp_cwe_count[k] + len(
+                        self.candi_data[syntax_feature][k]["Embeddings"]
+                    )
+
+        # 选取样本数大于等于threshold的cwe类型
+        threshold = 200
+        candi_CWEs = []
+        for k in dict_tmp_cwe_count.keys():
+            if dict_tmp_cwe_count[k] >= threshold:
+                candi_CWEs.append(k)
+
+        # 检查meta_batch是否大于candi_CWEs的长度
+        if M > len(candi_CWEs):
+            self.verbose("-------------------------------------------------------")
+            self.verbose(
+                "Error! Meta batch size is larger than the number of available candidate CWE types!"
+            )
+            self.verbose(
+                "Make sure it is smaller than the total number of available CWE types for meta_training stage."
+            )
+            sys.exit(1)
+
+        # 随机选择meta_batch个cwe类型作为训练集
+        Mtrain_CWE_types = random.sample(candi_CWEs, M)
+
+        # 从 candi_CWEs 中去掉已选中用于训练的类型
+        for CWE in Mtrain_CWE_types:
+            candi_CWEs.remove(CWE)
+
+        # 剩下的作为测试集
+        Mtest_CWE_types = random.sample(candi_CWEs, N)
         return Mtrain_CWE_types, Mtest_CWE_types
 
     def Scheme_API_SARD_4(self, meta_batch, type_dataset):
@@ -1010,6 +1094,11 @@ class Helper:
             Mtrain_CWE_types, Mtest_CWE_types = self.Scheme_Random_SARD_4(
                 self.batch_s, self.type_dataset
             )
+        # SARD_4: Randomly select batch_s CWEs for meta-training and 10 other CWEs for meta-testing. Calculate the mean performance of all tested CWEs.
+        elif self.experiment_scheme == "Scheme_Random_M_N_SARD_4":
+            Mtrain_CWE_types, Mtest_CWE_types = self.Scheme_Random_M_N_SARD_4(
+                self.batch_s, self.type_dataset
+            )
         # SARD_4: Use CWEs with same syntax features for meta-training and meta-testing
         elif self.experiment_scheme == "Scheme_API_SARD_4":
             Mtrain_CWE_types, Mtest_CWE_types = self.Scheme_API_SARD_4(
@@ -1238,14 +1327,17 @@ class Trainer(Helper):
     """Train 类真正要执行的部分"""
 
     def exec(self):
-        # 载入word2vec; applyEmbedding; 载入深度学习模型
-        (
-            w2v_model,
-            word_index,
-            embedding_matrix,
-            deep_model,
-            model_func,
-        ) = self.load_w2v_embed_model()
+        # 载入word2vec; applyEmbedding;
+        w2v_model, word_index, embedding_matrix = self.load_w2v_embed()
+        # 载入深度学习模型
+        deep_model, model_func = self.load_deep_model(word_index, embedding_matrix)
+        # (
+        #     w2v_model,
+        #     word_index,
+        #     embedding_matrix,
+        #     deep_model,
+        #     model_func,
+        # ) = self.load_w2v_embed_model()
 
         # Path to save the trained model:
         if not os.path.exists(self.config['training_settings']['model_save_path']):
@@ -1571,7 +1663,7 @@ class Trainer(Helper):
         print('Average time per epo', np.mean(epo_time))
         print()
 
-        # 根据F1-score的值，从 epos_train_F1 中找到前5个最大值的索引
+        # 输出表现最好的5个模型（以F1-score为标准）
         epos_train_loss = np.array(epos_train_loss)
         epos_train_acc = np.array(epos_train_acc)
         epos_train_rec = np.array(epos_train_rec)
@@ -1581,8 +1673,6 @@ class Trainer(Helper):
         epos_train_FNR = np.array(epos_train_FNR)
         epos_train_F1 = np.array(epos_train_F1)
         index = np.argsort(epos_train_F1)[-5:]
-
-        # 从 index 中找到对应的值
         print("The best five models according to the F1-score:")
         print(index)
         print()
@@ -1597,7 +1687,6 @@ class Trainer(Helper):
             print("epo_F1:", epos_train_F1[index[i]])
             print()
         print()
-
         print("The best model:")
         print("epo_loss:", epos_train_loss[index[-1]])
         print("epo_acc:", epos_train_acc[index[-1]])
@@ -1647,14 +1736,16 @@ class Trainer(Helper):
             os.makedirs(graph_save_path)
         plt.savefig(graph_save_path + os.sep + "metrics.png")
         plt.close()
-
         print(
             "Model training process graph saved to: "
             + graph_save_path
             + os.sep
             + "metrics.png"
         )
-        return
+
+        # best model
+        best_model = model_name + str(index[-1]) + ".h5"
+        return best_model
 
         # TODO!!!!!!!!
         # if self.config['model_settings']['model_para']['handle_data_imbalance']:
@@ -1809,14 +1900,17 @@ class Tester(Helper):
             "Meta-testing CWE types"
         ] = self.Mtest_CWE_types
 
-        # Load w2v and deep learning model structure:
-        (
-            w2v_model,
-            word_index,
-            embedding_matrix,
-            deep_model,
-            model_func,
-        ) = self.load_w2v_embed_model()
+        # 载入word2vec; applyEmbedding;
+        w2v_model, word_index, embedding_matrix = self.load_w2v_embed()
+        # 载入深度学习模型
+        deep_model, model_func = self.load_deep_model(word_index, embedding_matrix)
+        # (
+        #     w2v_model,
+        #     word_index,
+        #     embedding_matrix,
+        #     deep_model,
+        #     model_func,
+        # ) = self.load_w2v_embed_model()
 
         # Load model weights:
         self.verbose("Loading model weights... ")
@@ -1886,6 +1980,7 @@ class Tester(Helper):
         p = 0
         for CWE in Mtest_CWE_types:
             self.verbose("=======================================================")
+            time.sleep(1)
             self.verbose("Now is testing " + CWE + "!")
             js_exp_result["Experiment Results"][CWE] = {}
 
@@ -1902,13 +1997,13 @@ class Tester(Helper):
                 print(
                     "Error! For meta testing, the number of samples for this CWE is smaller than the value of k."
                 )
-                exit(5)
+                exit()
             Non_vul_sample_size = len(test_x[-1])
-            if sample_size < k:
+            if Non_vul_sample_size < k:
                 print(
                     "Error! For meta testing, the number of benign samples is smaller than the value of k."
                 )
-                exit(5)
+                exit()
 
             # 统计多次实验的结果
             list_all_labels = []
@@ -1928,6 +2023,7 @@ class Tester(Helper):
 
             # Repeat the experiment multiple times
             for test_round in range(times_repeat):
+                time.sleep(1)
                 self.verbose("-------------------------------------------------------")
                 self.verbose("Experiment round:" + str(test_round))
 
@@ -1975,6 +2071,9 @@ class Tester(Helper):
                             )
                         )
                 size = len(query_tuples)
+                if size == 0:
+                    print("There are no samples in the query set of the tested CWE!")
+                    exit()
                 # 应该对测试集数据大小进行约束，避免测试数据量过大，导致GPU内存不足，报错OOM。
                 max_size = 100
                 if size > max_size:
@@ -2009,7 +2108,7 @@ class Tester(Helper):
                     query_image.append(query_tuple[0])
                     query_label.append(query_tuple[1])
 
-                # 计算模型对于 CWE-k 的测试集的损失、准确率、召回率、精度等。
+                # 计算模型对于该 CWE 的测试集的损失、准确率、召回率、精度等。
                 (
                     query_label,
                     prb_pred,  # 概率, 用于计算AUC
@@ -2148,6 +2247,47 @@ class Tester(Helper):
             ] = all_confusion_matrix.tolist()
 
             p = p + 1
+
+        # 求所有CWE的平均测试结果
+        sum_loss = 0
+        sum_acc = 0
+        sum_recall = 0
+        sum_precision = 0
+        sum_TNR = 0
+        sum_FPR = 0
+        sum_FNR = 0
+        sum_F1 = 0
+        for CWE in js_exp_result["Experiment Results"].keys():
+            sum_loss = (
+                sum_loss + js_exp_result["Experiment Results"][CWE]["Average loss"]
+            )
+            sum_acc = (
+                sum_acc + js_exp_result["Experiment Results"][CWE]["Average accuracy"]
+            )
+            sum_recall = (
+                sum_recall + js_exp_result["Experiment Results"][CWE]["Average recall"]
+            )
+            sum_precision = (
+                sum_precision
+                + js_exp_result["Experiment Results"][CWE]["Average precision"]
+            )
+            sum_TNR = sum_TNR + js_exp_result["Experiment Results"][CWE]["Average TNR"]
+            sum_FPR = sum_FPR + js_exp_result["Experiment Results"][CWE]["Average FPR"]
+            sum_FNR = sum_FNR + js_exp_result["Experiment Results"][CWE]["Average FNR"]
+            sum_F1 = (
+                sum_F1 + js_exp_result["Experiment Results"][CWE]["Average F1_score"]
+            )
+        num_CWEs = len(js_exp_result["Experiment Results"].keys())
+        js_exp_result["Experiment Results"]["Average loss"] = sum_loss / num_CWEs
+        js_exp_result["Experiment Results"]["Average accuracy"] = sum_acc / num_CWEs
+        js_exp_result["Experiment Results"]["Average recall"] = sum_recall / num_CWEs
+        js_exp_result["Experiment Results"]["Average precision"] = (
+            sum_precision / num_CWEs
+        )
+        js_exp_result["Experiment Results"]["Average TNR"] = sum_TNR / num_CWEs
+        js_exp_result["Experiment Results"]["Average FPR"] = sum_FPR / num_CWEs
+        js_exp_result["Experiment Results"]["Average FNR"] = sum_FNR / num_CWEs
+        js_exp_result["Experiment Results"]["Average F1_score"] = sum_F1 / num_CWEs
 
         experiment_result = json.dumps(js_exp_result)
         with open(experiment_result_path, 'w') as f:
@@ -2367,4 +2507,13 @@ class Tester(Helper):
             plt.close()
 
         create_multi_roc_curve(test_CWE_types, list_query_labels, list_predict_probs)
-        return
+        return (
+            js_exp_result["Experiment Results"]["Average loss"],
+            js_exp_result["Experiment Results"]["Average accuracy"],
+            js_exp_result["Experiment Results"]["Average recall"],
+            js_exp_result["Experiment Results"]["Average precision"],
+            js_exp_result["Experiment Results"]["Average TNR"],
+            js_exp_result["Experiment Results"]["Average FPR"],
+            js_exp_result["Experiment Results"]["Average FNR"],
+            js_exp_result["Experiment Results"]["Average F1_score"],
+        )

@@ -156,7 +156,7 @@ if __name__ == '__main__':
     w2vModel = Word2Vec(
         total_list,
         workers=paras.n_workers,
-        vector_size=paras.size,  # 之前是size，后版本更新改为veector_size
+        vector_size=paras.size,  # Previous versions could be: size=paras.size
         window=paras.window,
         min_count=paras.min_count,
         sg=paras.algorithm,

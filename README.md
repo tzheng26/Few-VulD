@@ -1,35 +1,38 @@
 # ***Few-VulD: A Few-shot Learning Method for Software Vulnerability Detection***
 
 This is a meta-learning-based vulnerability detection system.
+
 It is based on the meta-learning algorithm MAML.
+
 Paper: [Few-shot-VulDetect](unavailable_yet)
+
 Github: [Few-shot-VulDetect ](https://github.com/tzheng26/Few-VulD)
 
 ***The code will be fully open-sourced after the paper is accepted.***
 
 ## **1. Experiment Environment**
 
-The experimental environment needs to be adjusted according to the computer hardware configuration. 
+The experimental environment needs to be adjusted according to the computer hardware configuration.
 
 Our experimental equipment configuration and environment are as follows:
 
-|      Name      |            Function            |                Version                |
-| :------------: | :----------------------------: | :-----------------------------------: |
-|      CPU      |    Central Processing Unit    | 13th Gen Intel(R) Core(TM) i7-13700KF |
-|      GPU      |    Graphics Processing Unit    |    NVIDIA GeForce RTX 4070 Ti 12G    |
-|     Ubuntu     |        Operation System        |              20.04.6 LTS              |
-|   Anaconda 3   | Python framework and libraries |                23.5.2                |
-|     Python     |      Programming Language      |                3.10.8                |
-|      CUDA      |         GPU Computing         |                11.8.0                |
-|     cuDNN     |         GPU Computing         |               8.8.0.121               |
-| Tensorflow-gpu |    Deep Learning Framework    |                2.10.0                |
-|     Keras     |    Deep Learning Framework    |                2.10.0                |
-|     Numpy     |      Scientific Computing      |                1.25.2                |
-|     Pandas     |         Data Analysis         |                 2.0.3                 |
-|  Scikit-learn  |        Machine Learning        |                 1.3.0                 |
-|     Gensim     |            Word2Vec            |                 4.3.1                 |
-|   matplotlib   |         Visualization         |                 3.7.2                 |
-|      yaml      |         Configuration         |                 0.2.5                 |
+|      Name      |            Function            |                     Version                     |
+| :------------: | :----------------------------: | :---------------------------------------------: |
+|      CPU      |    Central Processing Unit    | 13th Gen Intel(R) Core(TM) i7-13700KF @ 3.40GHz |
+|      GPU      |    Graphics Processing Unit    |         NVIDIA GeForce RTX 4070 Ti 12G         |
+|     Ubuntu     |        Operation System        |                   20.04.6 LTS                   |
+|   Anaconda 3   | Python framework and libraries |                     23.5.2                     |
+|     Python     |      Programming Language      |                     3.10.8                     |
+|      CUDA      |         GPU Computing         |                     11.8.0                     |
+|     cuDNN     |    GPU-accelerated library    |                    8.8.0.121                    |
+| Tensorflow-gpu |    Deep Learning Framework    |                     2.10.0                     |
+|     Keras     |    Deep Learning Framework    |                     2.10.0                     |
+|     Numpy     |      Scientific Computing      |                     1.25.2                     |
+|     Pandas     |         Data Analysis         |                      2.0.3                      |
+|  Scikit-learn  |        Machine Learning        |                      1.3.0                      |
+|     Gensim     |            Word2Vec            |                      4.3.1                      |
+|   matplotlib   |         Visualization         |                      3.7.2                      |
+|      yaml      |         Configuration         |                      0.2.5                      |
 
 ## **2. Installation**
 
@@ -405,9 +408,9 @@ embedding_model_path: "w2v/SARD/w2v_model.txt"
 
 **Note: The path of pre-trained tokenized and w2v_model has to be correct.**
 
-# **Split Training, Validation, and Test Data with Specific Experiment Scheme**
+## **8. Split Training, Validation, and Test Data with Specific Experiment Scheme**
 
-**Run `main_meta,py` to generate training, validation, and test data.**
+**Run `main.py` to generate training, validation, and test data.**
 
 **Firstly**, users should specify the **experiment scheme**.
 
@@ -417,7 +420,7 @@ embedding_model_path: "w2v/SARD/w2v_model.txt"
 **Then**, with specified dataset, users should seperate the dataset into **training, validation, and test data** using the `main_meta.py` script with the following parameters:
 
 ```bash
-python main_meta.py --config <Directory of the configuration file (Default: config/config.yaml).>
+python main.py --config <Directory of the configuration file (Default: config/config.yaml).>
                     --dataset <Directory of the user specified dataset (E.g., Datasets/Data_six/processed_data).>
                     --experiment_scheme <Experiment scheme, which will affect the way to seperate training, validation, and test data (E.g., Random_test).>
                     --seed <Specify the random seed to make experiment reproducible (E.g., 445)>
@@ -428,41 +431,40 @@ python main_meta.py --config <Directory of the configuration file (Default: conf
 E.g.,
 
 ```bash
-python main_meta.py --config config/config.yaml \
+python main.py --config config/config.yaml \
                     --dataset Datasets/SARD_4/processed_data \
                     --experiment_scheme Scheme_Random_SARD_4 \
-                    --seed 445 \
                     --sep_train_vali_test \
                     --train_vali_test_dump train_vali_test \
+					--seed 445
 ```
 
-The processed data will be dumped to the directory specified by the `--train_vali_test_dump` parameter, e.g., the folder **train_vali_test/**.
+The processed data will be dumped to the directory specified by the `--train_vali_test_dump` parameter, e.g., the folder **train_vali_test/train_vali_testN, where N inditicate N-th sets.**
 
-# **Start Meta-training**
+## **9. Start Meta-training**
 
 With splited training, validation, and test sets, run the `main_meta.py` script with the following parameters to start meta-training.
 
 ```bash
-python main_meta.py --config <Directory of the configuration file (Default: config/config.yaml).>
+python main.py --config <Directory of the configuration file (Default: config/config.yaml).>
                     --train_or_test 0 
                     --train_vali_test_load <Directory of the loaded training, validation, and test dataset; E.g.,: train_vali_test/train_vali_test0>
                     --seed <Specify the random seed to make experiment reproducible (E.g., 445)>
 ```
 
-# **Start Meta-testing**
+## **10. Start Meta-testing**
 
 With splited training, validation, and test sets, run the `main_meta.py` script with the following parameters to start meta-testing.
 
 ```bash
-python main_meta.py --config <Directory of the configuration file (Default: config/config.yaml).>
+python main.py --config <Directory of the configuration file (Default: config/config.yaml).>
                     --train_or_test 1 
                     --train_vali_test_load <Directory of the loaded training, validation, and test dataset; E.g.,: train_vali_test/train_vali_test0>
                     --trained_model <Path to the trained model> 
                     --seed <Specify the random seed to make experiment reproducible (E.g., 445)>
-
 ```
 
-# **Contributors**
+## **Contributors**
 
 - Tianming Zheng
 - Haojun Liu
