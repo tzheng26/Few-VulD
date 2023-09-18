@@ -1980,7 +1980,6 @@ class Tester(Helper):
         p = 0
         for CWE in Mtest_CWE_types:
             self.verbose("=======================================================")
-            time.sleep(1)
             self.verbose("Now is testing " + CWE + "!")
             js_exp_result["Experiment Results"][CWE] = {}
 
@@ -2023,7 +2022,6 @@ class Tester(Helper):
 
             # Repeat the experiment multiple times
             for test_round in range(times_repeat):
-                time.sleep(1)
                 self.verbose("-------------------------------------------------------")
                 self.verbose("Experiment round:" + str(test_round))
 
@@ -2133,6 +2131,7 @@ class Tester(Helper):
                     inner_step=3,
                     losss=loss_func,
                 )
+                time.sleep(1)
 
                 print(
                     # "query_label: ",

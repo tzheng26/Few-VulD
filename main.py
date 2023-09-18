@@ -287,10 +287,10 @@ if __name__ == '__main__':
 
     # Redirect stdout and stderr to log files
     var_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    # log_path = redir_log(var_time)
-    # LogOutputFile = open(log_path, 'w')
-    # sys.stdout = LogOutputFile
-    # sys.stderr = LogOutputFile
+    log_path = redir_log(var_time)
+    LogOutputFile = open(log_path, 'w')
+    sys.stdout = LogOutputFile
+    sys.stderr = LogOutputFile
 
     # show current time
     verbose("===================================================================")
@@ -325,4 +325,4 @@ if __name__ == '__main__':
         K.clear_session()
 
     # close log file
-    # LogOutputFile.close()
+    LogOutputFile.close()
