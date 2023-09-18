@@ -343,16 +343,15 @@ class MAMLDataLoader:
     def __len__(self):
         return self.steps
 
-    def get_one_metabatch(self, batch_size):
+    def get_one_metabatch(self, batch_size, k):
         self.meta_batch_size = batch_size
+        k_shot = k
+        query_num = k_shot
 
         batch_support_code = []
         batch_support_label = []
         batch_query_code = []
         batch_query_label = []
-
-        k_shot = 1
-        query_num = 1
 
         # 对于一个batch中的每个任务，T0,T1,T2,T3
         for index in range(self.meta_batch_size):
@@ -361,9 +360,9 @@ class MAMLDataLoader:
             query_code = []
             query_label = []
 
-            # 从选中的CWE类型的所有样本中，随机选2个，一个做sample set，一个做query set
+            # 从选中的CWE类型的所有样本中，随机选2k个，k个做sample set，k个做query set
             vul_ind = random.sample(range(len(self.data_x[index])), k_shot + query_num)
-            # 从无漏洞的所有样本中，随机选两个。
+            # 从无漏洞的所有样本中，随机选2k个。
             # data_x[-1] 是无漏洞 benign 类型
             non_vul_ind = random.sample(range(len(self.data_x[-1])), k_shot + query_num)
 

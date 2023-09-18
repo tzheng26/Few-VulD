@@ -1493,7 +1493,7 @@ class Trainer(Helper):
                     FNR,
                     F1,
                 ) = deep_model.train_on_metabatch(
-                    train_data.get_one_metabatch(self.batch_s),
+                    train_data.get_one_metabatch(self.batch_s, self.k_shot),
                     inner_optimizer,
                     inner_step=1,
                     outer_optimizer=outer_optimizer,
@@ -1572,7 +1572,7 @@ class Trainer(Helper):
                     FNR,
                     F1,
                 ) = deep_model.train_on_metabatch(
-                    vali_data.get_one_metabatch(self.batch_s),
+                    vali_data.get_one_metabatch(self.batch_s, self.k_shot),
                     inner_optimizer,
                     inner_step=1,
                     losss=loss_func,
