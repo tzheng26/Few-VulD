@@ -97,12 +97,9 @@ ls result_analysis
 
 ## **4. Datasets**
 
-The system supports two datasets.
+The system uses the SARD (Standard open-source vulneraebility dataset).
 
-- **SARD**: Standard open-source vulnerability dataset.
-- **Data_six**: Program samples from 6 real-world open-source projects.
-
-Note: Customized dataset can also be integrated into the system.
+- Note: Customized dataset can also be integrated into the system.
 
 **1. SARD**
 
@@ -111,29 +108,7 @@ Note: Customized dataset can also be integrated into the system.
 - CWE information: "Datasets/SARD_4/Program_Samples/CWE_info/sard_info.json".
 - *README.md* presents the description of the dataset.
 
-**2. Data_six**
-
-- The dataset includes program samples from 6 open-source projects, which are:
-  - Asterisk
-  - FFmpeg
-  - LibPNG
-  - LibTIFF
-  - Pidgin
-  - VLC
-
-<!--
-- The dataset can be obtained from：
-
-  - Paper: Deep Learning-Based Vulnerable Function Detection: A Benchmark
-  - Github: [https://github.com/DanielLin1986/Function-level-Vulnerability-Detection](https://github.com/DanielLin1986/Function-level-Vulnerability-Detection)
--->
-
-* Directory: “Datasets/Data_six”.
-* Program samples: "Datasets/Data_six/Six_project".
-* CWE information: "Datasets/Data_six/Six_project_info/static.json".
-* README.md presents the description of the dataset.
-
-**3. Customized Dataset**
+**2. Customized Dataset**
 
 - The system also supports user customized Dataset.
 - Just make sure the dataset satisfies the required format of our system.
@@ -142,18 +117,7 @@ Note: Customized dataset can also be integrated into the system.
 
 Data preprocessing includes removing code comments, removing empty lines, merging functions called across files, code slices, replacing program identifiers like user-defined variable names and function names, and distributing labels to each sample.
 
-~~**1. For samples in SARD:**~~
-
-Go to the directory of the dataset
-
-```bash
-cd ./Datasets/SARD
-python call_utils_for_pre.py
-```
-
-**2. For samples in SARD_4:**
-
-Go to the directory of the dataset
+**For samples in SARD_4:** Go to the directory of the dataset
 
 ```bash
 cd ./Datasets/SARD_4
@@ -176,13 +140,6 @@ python utils.py Program_Samples Pre_Program_Samples
 ```
 
 The preprocessed dataset is stored in folder `Pre_Program_Samples`
-
-**3. For samples in Data_six: (TODO: Complement-- wordlist, empty lines, etc.)**
-
-```bash
-cd ./Datasets/Data_six
-python utils.py Six_project Pre_Six_project
-```
 
 ## **6. Code Embedding**
 
@@ -210,10 +167,6 @@ python Word_to_vec_embedding.py --data_dir	<Directory of the dataset>\
 For a quick start, the user could simply use the shell script `Word2vec.sh` with default settings:
 
 ```bash
-./Word2vec.sh Data_six
-# or
-./Word2vec.sh SARD
-# or
 ./Word2vec.sh SARD_4
 # or
 ./Word2vec.sh Custormized_Data # (Need to edit the shell script and change the value of parameter --data_dir to your own dataset's location.)
@@ -223,7 +176,7 @@ The result of the **w2v** model will be stored in folder `Few-VulD/w2v` by defau
 
 **b) Transfer programs into embeddings.**
 
-Run `prep.py` with the following parameters to transfer programs to token sequences and labels:
+Run `Few-VulD/src/prep.py` with the following parameters to transfer programs to token sequences and labels:
 
 ```bash
 python prep.py --Dataset   <Capitalized name of the dataset> \
@@ -234,16 +187,12 @@ python prep.py --Dataset   <Capitalized name of the dataset> \
 ```
 
 (Note: --data_path, --tokenizer_path, and --json_path are required for custormized dataset.
-The path to the tokenizer obtained from Word_to_vec_embedding.py is embedded in the script for system supported dataset. `<font color=red>`For user cusomized dataset, path to the tokenzier is needed.`</font>`)
+The path to the tokenizer obtained from Word_to_vec_embedding.py is embedded in the script for system supported dataset. For user cusomized dataset, path to the tokenzier is needed.
 
 For system supported datasets, run the script like:
 
 ```bash
 python prep.py --Dataset SARD_4
-# or
-python prep.py --Dataset Data_six
-#or 
-python prep.py --Dataset SARD
 ```
 
 Note: The above operations are only suitable for system supported datasets. Please identify all the required parameters for customized dataset.
@@ -399,7 +348,7 @@ Before running the system, users should set the configuration file `config/confi
 # config.yaml
 # E.g.,
 ...
-model: "LSTM"
+model: "BiLSTM"
 ...
 tokenizer_path: "w2v/SARD/tokenizer.pickle"
 embedding_model_path: "w2v/SARD/w2v_model.txt"

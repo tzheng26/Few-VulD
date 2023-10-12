@@ -10,6 +10,7 @@ core.*
 /w2v/
 /testfolder/
 /main.sh
+/README.md.bak
 
 # Vscode
 .vscode/
