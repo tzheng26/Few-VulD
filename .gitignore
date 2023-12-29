@@ -16,6 +16,7 @@ core.*
 /src/
 /paper_graph/
 main.py.bak
+/config/README.md
 
 # Vscode
 .vscode/
