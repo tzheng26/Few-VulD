@@ -420,6 +420,5 @@ python main.py --config <Directory of the configuration file (Default: config/co
 - Haojun Liu
 - Hang Xu
 - Xiang Chen
-- Xinhao Li
-- Ping Yi *
-- Yue Wu
+- Ping Yi
+- Yue Wu *

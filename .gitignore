@@ -15,6 +15,7 @@ core.*
 .gitignore
 /src/
 /paper_graph/
+main.py.bak
 
 # Vscode
 .vscode/
