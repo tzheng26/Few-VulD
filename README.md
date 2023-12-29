@@ -4,15 +4,15 @@ This is a meta-learning-based vulnerability detection system.
 
 It is based on the meta-learning algorithm MAML.
 
-Paper: [Few-shot-VulDetect](unavailable_yet)
+Paper: [Few-VulD: A Few-shot Learning Framework for Software Vulnerability Detection](unavailable_yet)
 
-Github: [Few-shot-VulDetect ](https://github.com/tzheng26/Few-VulD)
+Github: [Few-VulD](https://github.com/tzheng26/Few-VulD)
 
 ***The code will be fully open-sourced after the paper is accepted.***
 
 ## **1. Experiment Environment**
 
-The experimental environment needs to be adjusted according to the computer hardware configuration.
+The experimental environment needs to be adjusted according to the computer hardware configurations.
 
 Our experimental equipment configuration and environment are as follows:
 
@@ -45,7 +45,7 @@ conda create -n Few-VulD
 conda activate Few-VulD
 ```
 
-Install Tensorflow-gpu, CUDA and cuDNN according to your computer hardware setups.
+**Install Tensorflow-gpu, CUDA and cuDNN according to your computer hardware setups.**
 
 Some versions of cuda and cudnn are not involved in conda's default install channel. Use the command below to add channel "conda-forge"
 
@@ -83,25 +83,26 @@ conda install pyyaml pandas matplotlib scikit-learn tqdm gensim
 
 ```bash
 # Split dataset into training, validation, and test sets.
-./main_meta.sh data
+./Few-VulD.sh data
 
 # Start meta-training.
-./main_meta.sh train
+./Few-VulD.sh train
 
 # Start meta-testing.
-./main_meta.sh test
+./Few-VulD.sh test
 
 # Result will be stored in the "result_analysis" folder.
-ls result_analysis
+cd result_analysis
+ls
 ```
 
 ## **4. Datasets**
 
-The system uses the SARD (Standard open-source vulneraebility dataset).
+The system uses program samples from SARD (Standard open-source vulneraebility dataset) and NVD.
 
 - Note: Customized dataset can also be integrated into the system.
 
-**1. SARD**
+**1. Supported Dataset**
 
 - Directory: "Datasets/SARD_4".
 - Program samples: "Datasets/SARD_4/Program_Samples".

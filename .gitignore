@@ -11,6 +11,10 @@ core.*
 /testfolder/
 /main.sh
 /README.md.bak
+/main.py.bak
+.gitignore
+/src/
+/paper_graph/
 
 # Vscode
 .vscode/
